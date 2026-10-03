@@ -9,7 +9,15 @@ import {
   isRedCard,
 } from './cardAssets';
 
-export type CardMark = 'selectable' | 'selected' | 'highlight' | 'locked';
+export type CardMark =
+  | 'selectable'
+  | 'selected'
+  | 'highlight'
+  | 'locked'
+  | 'draggable'
+  | 'dragging'
+  | 'drop-zone'
+  | 'drop-target';
 
 interface CardViewProps {
   /** `null` = verdeckte Karte. */
@@ -20,6 +28,8 @@ interface CardViewProps {
   anchor?: string;
   hidden?: boolean;
   onClick?: () => void;
+  /** Für Ziehen per Maus/Touch. */
+  onPointerDown?: (e: React.PointerEvent<HTMLElement>) => void;
   title?: string;
 }
 
@@ -31,6 +41,7 @@ export function CardView({
   anchor,
   hidden,
   onClick,
+  onPointerDown,
   title,
 }: CardViewProps) {
   const classes = ['card', small && 'card--small', ...marks.map((m) => `card--${m}`)]
@@ -44,8 +55,9 @@ export function CardView({
       className={classes}
       data-anchor={anchor}
       style={{ visibility: hidden ? 'hidden' : undefined }}
-      disabled={!onClick}
+      disabled={!onClick && !onPointerDown}
       onClick={onClick}
+      onPointerDown={onPointerDown}
       aria-label={label}
       title={label}
       // Neuer Schlüssel bei Auf-/Zudecken → neu einhängen → CSS-Dreh-Animation.

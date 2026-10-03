@@ -8,11 +8,14 @@ import {
 } from '@cambio/shared';
 import { api, type Response } from '../net/store';
 import { errorText } from '../net/errors';
+import { HowToPlay } from './HowToPlay';
+import { SnapModeSetting } from './SnapModeSetting';
 
 export function Lobby({ room, session }: { room: RoomView; session: Session }) {
   const isHost = room.hostId === session.playerId;
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+  const [showRules, setShowRules] = useState(false);
   const inviteUrl = `${window.location.origin}/?code=${room.code}`;
 
   async function run(fn: () => Promise<Response>) {
@@ -85,9 +88,17 @@ export function Lobby({ room, session }: { room: RoomView; session: Session }) {
         />
       </section>
 
+      <section className="section">
+        <h2>Deine Bedienung</h2>
+        <SnapModeSetting />
+      </section>
+
       {error && <p className="error">{error}</p>}
 
       <div className="row row--end">
+        <button type="button" className="link-button" onClick={() => setShowRules(true)}>
+          So wird gespielt
+        </button>
         <button type="button" className="button" onClick={() => void api.leaveRoom()}>
           Verlassen
         </button>
@@ -104,6 +115,7 @@ export function Lobby({ room, session }: { room: RoomView; session: Session }) {
           <p className="muted">Warte auf den Host …</p>
         )}
       </div>
+      <HowToPlay open={showRules} onClose={() => setShowRules(false)} />
     </main>
   );
 }

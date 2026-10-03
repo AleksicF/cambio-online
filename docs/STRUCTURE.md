@@ -54,14 +54,18 @@ Cambio Online/
 │        ├─ main.tsx         Startpunkt der Webseite
 │        ├─ App.tsx          Entscheidet: Startseite, Lobby oder Spieltisch
 │        ├─ styles.css       Gesamtes Aussehen: Farben, Abstände, Kartengröße
+│        ├─ prefs.ts         Persönliche Einstellungen im Browser (Abwerfen per Klick/Ziehen)
 │        ├─ screens/
 │        │  ├─ Home.tsx      Startseite (Name, Raum erstellen/beitreten)
-│        │  └─ Lobby.tsx     Lobby (Spielerliste, Einstellungen, Start)
+│        │  ├─ Lobby.tsx     Lobby (Spielerliste, Einstellungen, Start)
+│        │  ├─ HowToPlay.tsx Spielanleitung (Pop-up auf Startseite und in der Lobby)
+│        │  └─ SnapModeSetting.tsx Auswahl „Abwerfen per Klicken/Ziehen“
 │        ├─ game/
 │        │  ├─ Game.tsx      Spieltisch: Layout, Buttons, Hinweistexte
 │        │  ├─ Results.tsx   Auswertung nach Partie/Spielende
 │        │  ├─ interaction.ts Was beim Klick auf eine Karte passiert; Fähigkeitstexte
 │        │  ├─ useFlights.tsx Flug-Animationen der Karten (Dauer, Tempo)
+│        │  ├─ useSnapDrag.tsx Abwerfen per Ziehen auf die Ablage
 │        │  ├─ useEventFeed.ts Protokoll-Texte, kurz aufgedeckte Karten
 │        │  ├─ TimerBar.tsx  Zeitbalken
 │        │  └─ anchors.ts    Positionsmarken für Animationen
@@ -110,6 +114,8 @@ Nicht von Hand ändern: `package-lock.json` (wird von npm verwaltet),
 | Welche Karte welche Fähigkeit hat                | `packages/shared/src/game/engine.ts` → `abilityOf`                                                                    |
 | Spielregeln ändern                               | zuerst `docs/RULES.md`, dann `engine.ts` (und Tests in `engine.test.ts`)                                              |
 | Wertung / Strafpunkte                            | `packages/shared/src/game/scoring.ts`                                                                                 |
+| Text der Spielanleitung                          | `packages/client/src/screens/HowToPlay.tsx` (Kartenwerte kommen automatisch aus `cards.ts`)                           |
+| Trefferzone beim Ziehen auf die Ablage           | `game/useSnapDrag.tsx` → `DROP_MARGIN` (Pixel um die Ablage herum)                                                    |
 | Seitentitel im Browser-Tab                       | `packages/client/index.html`                                                                                          |
 | Impressum/Datenschutz ausfüllen und freischalten | `packages/client/src/legal/legalInfo.ts` (Angaben, `published: true`)                                                 |
 | Texte von Impressum/Datenschutz ändern           | `packages/client/src/legal/LegalPages.tsx`                                                                            |

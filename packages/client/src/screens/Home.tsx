@@ -3,6 +3,7 @@ import { MAX_NAME_LENGTH, ROOM_CODE_LENGTH } from '@cambio/shared';
 import { api, loadName, type Response } from '../net/store';
 import { errorText } from '../net/errors';
 import { extractRoomCode } from '../net/roomCode';
+import { HowToPlay } from './HowToPlay';
 
 function codeFromUrl(): string {
   return extractRoomCode(new URLSearchParams(window.location.search).get('code') ?? '');
@@ -15,6 +16,7 @@ export function Home({ kicked }: { kicked: boolean }) {
     kicked ? 'Du wurdest aus dem Raum entfernt.' : null,
   );
   const [busy, setBusy] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const invited = codeFromUrl() !== '';
 
   async function run(fn: () => Promise<Response>) {
@@ -33,7 +35,13 @@ export function Home({ kicked }: { kicked: boolean }) {
   return (
     <main className="page page--narrow">
       <h1 className="title">Cambio</h1>
-      <p className="muted">Kartenspiel für 2–6 Spieler.</p>
+      <p className="muted">
+        Kartenspiel für 2–6 Spieler.{' '}
+        <button type="button" className="link-button" onClick={() => setShowRules(true)}>
+          So wird gespielt
+        </button>
+      </p>
+      <HowToPlay open={showRules} onClose={() => setShowRules(false)} />
 
       <form className="stack" onSubmit={onJoin}>
         <label className="field">

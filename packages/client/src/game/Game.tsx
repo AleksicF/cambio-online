@@ -25,6 +25,8 @@ import { useEventFeed } from './useEventFeed';
 import { useFlights } from './useFlights';
 import { Results } from './Results';
 import { TimerBar } from './TimerBar';
+import { useSnapDrag } from './useSnapDrag';
+import { useSnapMode, type SnapMode } from '../prefs';
 
 interface GameProps {
   update: GameUpdate;
@@ -43,6 +45,10 @@ export function Game({ update, room, deadline }: GameProps) {
   const [stored, setStored] = useState({ phaseKey, selection: EMPTY_SELECTION });
   const selection = stored.phaseKey === phaseKey ? stored.selection : EMPTY_SELECTION;
   const setSelection = (next: LocalSelection) => setStored({ phaseKey, selection: next });
+
+  const snapMode = useSnapMode();
+  const snapWindowKey = view.phase.type === 'snapWindow' && snapMode === 'drag' ? phaseKey : null;
+  const snapDrag = useSnapDrag(snapWindowKey, (target) => void send({ type: 'snap', target }));
 
   const names = new Map(view.players.map((p) => [p.id, p.name]));
   const name = (id: string) => names.get(id) ?? '?';
@@ -89,6 +95,9 @@ export function Game({ update, room, deadline }: GameProps) {
         highlights={highlights}
         revealAll={revealAll}
         onCard={onCard}
+        snapMode={snapMode}
+        dragging={snapDrag.dragging?.ref ?? null}
+        onDragStart={snapDrag.start}
       />
     );
   }
@@ -144,11 +153,13 @@ export function Game({ update, room, deadline }: GameProps) {
               anchor={DISCARD}
               hidden={hidden.has(DISCARD)}
               marks={
-                selection.takingDiscard
-                  ? ['selected']
-                  : canDraw || (myTurn && view.phase.type === 'drawn')
-                    ? ['selectable']
-                    : []
+                snapDrag.dragging
+                  ? [snapDrag.dragging.overDiscard ? 'drop-target' : 'drop-zone']
+                  : selection.takingDiscard
+                    ? ['selected']
+                    : canDraw || (myTurn && view.phase.type === 'drawn')
+                      ? ['selectable']
+                      : []
               }
               onClick={onDiscard}
             />
@@ -175,7 +186,7 @@ export function Game({ update, room, deadline }: GameProps) {
 
       <section className="status">
         <TimerBar deadline={deadline} key={`${deadline}`} />
-        <Prompt view={view} selection={selection} name={name} />
+        <Prompt view={view} selection={selection} name={name} snapMode={snapMode} />
         <div className="status__actions">
           {myTurn && view.phase.type === 'turn' && selection.takingDiscard && (
             <button type="button" className="button" onClick={() => setSelection(EMPTY_SELECTION)}>
@@ -228,6 +239,7 @@ export function Game({ update, room, deadline }: GameProps) {
       </section>
 
       {layer}
+      {snapDrag.ghost}
     </main>
   );
 }
@@ -271,6 +283,9 @@ function Hand({
   highlights,
   revealAll,
   onCard,
+  snapMode,
+  dragging,
+  onDragStart,
 }: {
   player: PlayerViewPlayer;
   view: PlayerView;
@@ -281,7 +296,11 @@ function Hand({
   highlights: Set<string>;
   revealAll: boolean;
   onCard: (ref: SlotRef) => void;
+  snapMode: SnapMode;
+  dragging: SlotRef | null;
+  onDragStart: (ref: SlotRef, e: React.PointerEvent<HTMLElement>) => void;
 }) {
+  const dragToSnap = view.phase.type === 'snapWindow' && snapMode === 'drag';
   const sum = revealAll
     ? player.slots.reduce((s, slot) => s + (slot?.card ? cardValue(slot.card) : 0), 0)
     : null;
@@ -300,6 +319,11 @@ function Hand({
           } else if (selectable) marks.push('selectable');
           if (highlights.has(anchor)) marks.push('highlight');
           if (view.cambioCallerId === player.id && !revealAll) marks.push('locked');
+          const draggable = selectable && dragToSnap;
+          if (draggable) marks.push('draggable');
+          if (dragging?.playerId === ref.playerId && dragging.slot === ref.slot) {
+            marks.push('dragging');
+          }
           return (
             <CardView
               key={i}
@@ -308,7 +332,8 @@ function Hand({
               anchor={anchor}
               hidden={hidden.has(anchor)}
               marks={marks}
-              onClick={selectable ? () => onCard(ref) : undefined}
+              onClick={selectable && !draggable ? () => onCard(ref) : undefined}
+              onPointerDown={draggable ? (e) => onDragStart(ref, e) : undefined}
             />
           );
         })}
@@ -322,10 +347,12 @@ function Prompt({
   view,
   selection,
   name,
+  snapMode,
 }: {
   view: PlayerView;
   selection: LocalSelection;
   name: (id: string) => string;
+  snapMode: SnapMode;
 }) {
   const { phase, me } = view;
   const myTurn = view.currentPlayerId === me;
@@ -369,7 +396,9 @@ function Prompt({
       text =
         view.cambioCallerId === me
           ? 'Abwurf-Fenster offen.'
-          : 'Abwerfen? Klicke eine Karte mit dem gleichen Rang wie die offene Karte.';
+          : snapMode === 'drag'
+            ? 'Abwerfen? Ziehe eine Karte mit dem gleichen Rang auf die Ablage.'
+            : 'Abwerfen? Klicke eine Karte mit dem gleichen Rang wie die offene Karte.';
       break;
     case 'snapGive':
       text =
