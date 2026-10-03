@@ -99,6 +99,14 @@ export const ABILITY_TEXT: Record<Ability, string> = {
   king: 'Schau dir eine beliebige Karte an – danach darfst du tauschen.',
 };
 
+/** Kurzname für Hilfe und Übersicht. */
+export const ABILITY_LABEL: Record<Ability, string> = {
+  peekOwn: 'Eigene Karte ansehen',
+  peekOther: 'Fremde Karte ansehen',
+  blindSwap: 'Blind tauschen',
+  king: 'Ansehen, dann tauschen',
+};
+
 export const ABILITY_SHORT: Record<Ability, string> = {
   peekOwn: 'schaut eigene Karte an',
   peekOther: 'schaut fremde Karte an',

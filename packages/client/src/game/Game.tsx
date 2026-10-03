@@ -26,7 +26,8 @@ import { useFlights } from './useFlights';
 import { Results } from './Results';
 import { TimerBar } from './TimerBar';
 import { useSnapDrag } from './useSnapDrag';
-import { useSnapMode, type SnapMode } from '../prefs';
+import { setShowHelp, useShowHelp, useSnapMode, type SnapMode } from '../prefs';
+import { HelpPanel, cardHint } from './HelpPanel';
 
 interface GameProps {
   update: GameUpdate;
@@ -47,6 +48,7 @@ export function Game({ update, room, deadline }: GameProps) {
   const setSelection = (next: LocalSelection) => setStored({ phaseKey, selection: next });
 
   const snapMode = useSnapMode();
+  const showHelp = useShowHelp();
   const snapWindowKey = view.phase.type === 'snapWindow' && snapMode === 'drag' ? phaseKey : null;
   const snapDrag = useSnapDrag(snapWindowKey, (target) => void send({ type: 'snap', target }));
 
@@ -110,15 +112,25 @@ export function Game({ update, room, deadline }: GameProps) {
         <span>
           Raum {room.code} · Partie {view.partieNumber} · Umlauf {view.lap}
         </span>
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => {
-            if (window.confirm('Spiel wirklich verlassen?')) void api.leaveRoom();
-          }}
-        >
-          Verlassen
-        </button>
+        <span className="game__bar-actions">
+          <button
+            type="button"
+            className="link-button"
+            aria-pressed={showHelp}
+            onClick={() => setShowHelp(!showHelp)}
+          >
+            {showHelp ? 'Hilfe aus' : 'Hilfe an'}
+          </button>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              if (window.confirm('Spiel wirklich verlassen?')) void api.leaveRoom();
+            }}
+          >
+            Verlassen
+          </button>
+        </span>
       </header>
 
       <section className="opponents">
@@ -167,6 +179,9 @@ export function Game({ update, room, deadline }: GameProps) {
             <EmptySlot anchor={DISCARD} />
           )}
           <span className="pile__label">Ablage</span>
+          {showHelp && view.discardTop && (
+            <span className="pile__hint">{cardHint(view.discardTop, false)}</span>
+          )}
         </div>
 
         <div className="pile">
@@ -181,6 +196,7 @@ export function Game({ update, room, deadline }: GameProps) {
             <EmptySlot anchor={DRAWN} />
           )}
           <span className="pile__label">{drawnCard !== undefined ? 'Gezogen' : ' '}</span>
+          {showHelp && drawnCard && <span className="pile__hint">{cardHint(drawnCard, true)}</span>}
         </div>
       </section>
 
@@ -229,6 +245,8 @@ export function Game({ update, room, deadline }: GameProps) {
           {renderHand(me, false)}
         </PlayerPanel>
       </section>
+
+      {showHelp && !revealAll && <HelpPanel />}
 
       {revealAll && <Results view={view} room={room} />}
 

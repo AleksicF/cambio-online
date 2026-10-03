@@ -9,7 +9,7 @@ import {
 import { api, type Response } from '../net/store';
 import { errorText } from '../net/errors';
 import { HowToPlay } from './HowToPlay';
-import { SnapModeSetting } from './SnapModeSetting';
+import { PersonalSettings } from './PersonalSettings';
 
 export function Lobby({ room, session }: { room: RoomView; session: Session }) {
   const isHost = room.hostId === session.playerId;
@@ -90,7 +90,7 @@ export function Lobby({ room, session }: { room: RoomView; session: Session }) {
 
       <section className="section">
         <h2>Deine Bedienung</h2>
-        <SnapModeSetting />
+        <PersonalSettings />
       </section>
 
       {error && <p className="error">{error}</p>}

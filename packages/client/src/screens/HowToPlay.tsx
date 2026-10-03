@@ -189,6 +189,10 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
               <strong>Abwerfen:</strong> Karte anklicken oder auf die Ablage ziehen – das stellst du
               in der Lobby unter „Deine Bedienung“ ein.
             </li>
+            <li>
+              <strong>Hilfe:</strong> Oben rechts am Tisch blendest du eine Kartenübersicht mit
+              Werten und Fähigkeiten ein oder aus.
+            </li>
             <li>Der Balken unter der Tischmitte zeigt die verbleibende Zeit.</li>
             <li>Verbindung weg oder Seite neu geladen? Einfach neu laden – du bist wieder drin.</li>
           </ul>

@@ -799,3 +799,59 @@ div.card--dragging {
   padding-right: 1rem;
   white-space: nowrap;
 }
+
+/* ---- Hilfe --------------------------------------------------------------- */
+
+.game__bar-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.pile__hint {
+  max-width: 7.5rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.choice__option--standalone {
+  border-top: 1px solid var(--line);
+  margin-top: 0.5rem;
+  padding-top: 0.625rem;
+}
+
+.help {
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.help__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.help__table th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding-bottom: 0.25rem;
+}
+
+.help__table td {
+  padding: 0.2rem 0.75rem 0.2rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.help__note {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
