@@ -2,9 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { MAX_NAME_LENGTH, ROOM_CODE_LENGTH } from '@cambio/shared';
 import { api, loadName, type Response } from '../net/store';
 import { errorText } from '../net/errors';
+import { extractRoomCode } from '../net/roomCode';
 
 function codeFromUrl(): string {
-  return new URLSearchParams(window.location.search).get('code')?.toUpperCase() ?? '';
+  return extractRoomCode(new URLSearchParams(window.location.search).get('code') ?? '');
 }
 
 export function Home({ kicked }: { kicked: boolean }) {
@@ -51,8 +52,7 @@ export function Home({ kicked }: { kicked: boolean }) {
             <span>Raumcode</span>
             <input
               value={code}
-              maxLength={ROOM_CODE_LENGTH}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => setCode(extractRoomCode(e.target.value))}
               className="input--code"
               autoComplete="off"
             />

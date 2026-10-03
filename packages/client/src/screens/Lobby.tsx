@@ -12,7 +12,7 @@ import { errorText } from '../net/errors';
 export function Lobby({ room, session }: { room: RoomView; session: Session }) {
   const isHost = room.hostId === session.playerId;
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   const inviteUrl = `${window.location.origin}/?code=${room.code}`;
 
   async function run(fn: () => Promise<Response>) {
@@ -21,13 +21,13 @@ export function Lobby({ room, session }: { room: RoomView; session: Session }) {
     if (!r.ok) setError(errorText(r.error));
   }
 
-  async function copyInvite() {
+  async function copy(what: 'code' | 'link') {
     try {
-      await navigator.clipboard.writeText(inviteUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(what === 'code' ? room.code : inviteUrl);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
-      setError('Link konnte nicht kopiert werden.');
+      setError('Konnte nicht in die Zwischenablage kopiert werden.');
     }
   }
 
@@ -38,9 +38,14 @@ export function Lobby({ room, session }: { room: RoomView; session: Session }) {
           <p className="muted">Raumcode</p>
           <p className="room-code">{room.code}</p>
         </div>
-        <button type="button" className="button" onClick={() => void copyInvite()}>
-          {copied ? 'Kopiert' : 'Einladungslink kopieren'}
-        </button>
+        <div className="lobby-header__actions">
+          <button type="button" className="button" onClick={() => void copy('code')}>
+            {copied === 'code' ? 'Kopiert' : 'Code kopieren'}
+          </button>
+          <button type="button" className="button" onClick={() => void copy('link')}>
+            {copied === 'link' ? 'Kopiert' : 'Link kopieren'}
+          </button>
+        </div>
       </header>
 
       <section className="section">

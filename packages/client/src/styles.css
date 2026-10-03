@@ -634,3 +634,10 @@ button.card {
 .title + .muted {
   margin-bottom: 2rem;
 }
+
+.lobby-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
