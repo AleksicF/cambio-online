@@ -4,6 +4,7 @@ Online-Multiplayer-Version des Kartenspiels **Cambio** für 2–6 Spieler – mi
 
 - Spielregeln: [docs/RULES.md](docs/RULES.md)
 - Eigene Kartendesigns: [docs/CARDS.md](docs/CARDS.md)
+- Was liegt wo? [docs/STRUCTURE.md](docs/STRUCTURE.md)
 - Architektur: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Voraussetzungen

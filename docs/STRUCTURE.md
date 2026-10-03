@@ -1,0 +1,127 @@
+# Projektstruktur – was liegt wo?
+
+Diese Datei erklärt jeden Ordner und jede wichtige Datei und zeigt, wo du was
+änderst. Sie wird bei jeder Strukturänderung mit aktualisiert.
+
+## Überblick
+
+Das Projekt besteht aus drei Paketen, die zusammenarbeiten:
+
+```
+Browser (client)  ⇄  Internet / Socket.IO  ⇄  Server (server)
+        └──────────── nutzen beide ───────────┘
+                     Spiellogik (shared)
+```
+
+- **shared**: die Spielregeln als Code. Kennt weder Browser noch Server.
+- **server**: verwaltet Räume, Timer und entscheidet, was erlaubt ist. Nur der Server kennt alle Karten.
+- **client**: die Webseite, die Spieler sehen und bedienen.
+
+## Ordnerbaum
+
+```
+Cambio Online/
+├─ docs/                     Dokumentation
+│  ├─ RULES.md               Spielregeln – verbindliche Vorlage für den Code
+│  ├─ STRUCTURE.md           Diese Datei
+│  ├─ ARCHITECTURE.md        Technischer Aufbau (für Entwickler)
+│  └─ CARDS.md               Anleitung für eigene Kartenbilder
+│
+├─ packages/
+│  ├─ shared/src/            ── Spiellogik ──
+│  │  ├─ cards.ts            Kartenwerte, Deck, Mischen
+│  │  ├─ settings.ts         Lobby-Einstellungen: Standardwerte und Grenzen
+│  │  ├─ protocol.ts         Nachrichten zwischen Browser und Server
+│  │  └─ game/
+│  │     ├─ engine.ts        Herzstück: alle Spielzüge und Regeln
+│  │     ├─ scoring.ts       Wertung (Einzelspiel, Punktemodus)
+│  │     ├─ view.ts          Was ein Spieler sehen darf
+│  │     └─ types.ts         Datentypen (Zustand, Aktionen, Ereignisse)
+│  │
+│  ├─ server/src/            ── Server ──
+│  │  ├─ index.ts            Startpunkt (Port)
+│  │  ├─ app.ts              Webserver, liefert die Seite aus, /health
+│  │  ├─ sockets.ts          Empfängt Nachrichten der Spieler
+│  │  ├─ validation.ts       Prüft Eingaben der Spieler auf Gültigkeit
+│  │  └─ rooms/
+│  │     ├─ Room.ts          Ein Raum: Spieler, Host, Timer, laufendes Spiel
+│  │     └─ RoomManager.ts   Alle Räume, Raumcodes, Aufräumen leerer Räume
+│  │
+│  └─ client/                ── Webseite ──
+│     ├─ index.html          HTML-Grundgerüst, Seitentitel
+│     ├─ public/             Statische Dateien (z. B. später public/cards/ für Kartenbilder)
+│     └─ src/
+│        ├─ main.tsx         Startpunkt der Webseite
+│        ├─ App.tsx          Entscheidet: Startseite, Lobby oder Spieltisch
+│        ├─ styles.css       Gesamtes Aussehen: Farben, Abstände, Kartengröße
+│        ├─ screens/
+│        │  ├─ Home.tsx      Startseite (Name, Raum erstellen/beitreten)
+│        │  └─ Lobby.tsx     Lobby (Spielerliste, Einstellungen, Start)
+│        ├─ game/
+│        │  ├─ Game.tsx      Spieltisch: Layout, Buttons, Hinweistexte
+│        │  ├─ Results.tsx   Auswertung nach Partie/Spielende
+│        │  ├─ interaction.ts Was beim Klick auf eine Karte passiert; Fähigkeitstexte
+│        │  ├─ useFlights.tsx Flug-Animationen der Karten (Dauer, Tempo)
+│        │  ├─ useEventFeed.ts Protokoll-Texte, kurz aufgedeckte Karten
+│        │  ├─ TimerBar.tsx  Zeitbalken
+│        │  └─ anchors.ts    Positionsmarken für Animationen
+│        ├─ cards/
+│        │  ├─ CardView.tsx  Wie eine Karte gezeichnet wird
+│        │  └─ cardAssets.ts Kartennamen, Beschriftung, Schalter für eigene Bilder
+│        └─ net/
+│           ├─ store.ts      Verbindung zum Server, Spielzustand im Browser
+│           ├─ socket.ts     Socket.IO-Verbindung
+│           ├─ errors.ts     Fehlermeldungen (deutsche Texte)
+│           └─ roomCode.ts   Raumcode aus Eingabe/Link lesen
+│
+├─ .github/workflows/ci.yml  Automatische Prüfung bei jedem Push auf GitHub
+├─ render.yaml               Hosting-Konfiguration für Render
+├─ Dockerfile                Container für anderes Hosting (z. B. eigener Server)
+├─ package.json              Befehle (npm run …) und Abhängigkeiten
+├─ README.md                 Einstieg, Befehle, Deployment
+└─ CLAUDE.md                 Hinweise für Claude
+```
+
+Dateien mit `.test.ts` im Namen sind automatische Tests. Sie liegen neben
+der Datei, die sie prüfen.
+
+Nicht von Hand ändern: `package-lock.json` (wird von npm verwaltet),
+`node_modules/` und `dist/` (werden automatisch erzeugt).
+
+## Wo ändere ich was?
+
+| Ich will …                                     | Datei                                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Farben, Schriftgrößen, Abstände ändern         | `packages/client/src/styles.css` – Farben ganz oben unter `:root`                        |
+| Kartengröße ändern                             | `styles.css` → `--card-w` (eigene Karten) und `--card-w-small` (Gegner)                  |
+| Eigene Kartenbilder einsetzen                  | siehe `docs/CARDS.md`                                                                    |
+| Kartenbeschriftung ändern (z. B. „B“ für Bube) | `packages/client/src/cards/cardAssets.ts` → `RANK_LABEL`                                 |
+| Texte auf der Startseite / Lobby ändern        | `screens/Home.tsx` bzw. `screens/Lobby.tsx`                                              |
+| Hinweistexte am Spieltisch ändern              | `game/Game.tsx` → Funktion `Prompt`; Fähigkeiten in `game/interaction.ts`                |
+| Protokoll-Texte ändern                         | `game/useEventFeed.ts`                                                                   |
+| Fehlermeldungen ändern                         | `net/errors.ts`                                                                          |
+| Animationstempo ändern                         | `game/useFlights.tsx` → `DURATION` (Sekunden pro Flug), `STEP` (Abstand zwischen Flügen) |
+| Standardwerte der Lobby-Einstellungen          | `packages/shared/src/settings.ts` → `DEFAULT_SETTINGS`                                   |
+| Erlaubte Bereiche der Einstellungen            | `settings.ts` → `SETTINGS_LIMITS`                                                        |
+| Kartenwerte ändern (z. B. schwarzer König)     | `packages/shared/src/cards.ts` → `cardValue`                                             |
+| Welche Karte welche Fähigkeit hat              | `packages/shared/src/game/engine.ts` → `abilityOf`                                       |
+| Spielregeln ändern                             | zuerst `docs/RULES.md`, dann `engine.ts` (und Tests in `engine.test.ts`)                 |
+| Wertung / Strafpunkte                          | `packages/shared/src/game/scoring.ts`                                                    |
+| Seitentitel im Browser-Tab                     | `packages/client/index.html`                                                             |
+
+**Achtung bei Regeländerungen:** Die Tests prüfen die aktuellen Regeln. Wenn du
+zum Beispiel einen Kartenwert änderst, schlägt `npm test` fehl, bis der
+passende Test angepasst ist. Das ist gewollt: So fällt kein Regelfehler unbemerkt durch.
+
+## Nach einer Änderung
+
+```bash
+npm run dev          # Spiel lokal starten: http://localhost:5173
+npm test             # Tests ausführen
+npm run lint         # Code-Stil prüfen
+npm run typecheck    # Typfehler finden
+npm run format       # Code automatisch einheitlich formatieren
+```
+
+Änderungen an `client` erscheinen im Browser sofort. Änderungen an `server`
+oder `shared` starten den Server neu, dabei gehen laufende Testspiele verloren.
