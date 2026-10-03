@@ -42,6 +42,18 @@ docs/       Regeln & Architektur
 
 ## Deployment
 
+Das Spiel läuft als ein einziger Webdienst (Server liefert auch den Client aus).
+
+### Render (kostenlos)
+
+1. Bei [render.com](https://render.com) mit GitHub anmelden.
+2. **New → Blueprint** wählen und dieses Repository verbinden.
+3. Render liest `render.yaml` und legt den Dienst an. Jeder Push auf `main` deployt automatisch.
+
+Im Free-Tarif schläft der Dienst nach 15 Minuten ohne Besucher ein; der erste Aufruf danach dauert ca. 30–60 Sekunden.
+
+### Docker (z. B. für einen eigenen Server)
+
 ```bash
 docker build -t cambio-online .
 docker run -p 3001:3001 cambio-online
