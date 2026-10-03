@@ -1,0 +1,13 @@
+{
+  "name": "@cambio/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spiellogik, Typen und Netzwerkprotokoll – von Client und Server gemeinsam genutzt",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
