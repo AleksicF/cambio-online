@@ -641,3 +641,32 @@ button.card {
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+/* ---- Rechtliches --------------------------------------------------------- */
+
+.legal h2 {
+  margin-top: 1.75rem;
+}
+
+.legal p {
+  margin-bottom: 0.75rem;
+}
+
+.legal__draft {
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed var(--danger);
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.legal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.legal-footer a {
+  color: var(--muted);
+}
