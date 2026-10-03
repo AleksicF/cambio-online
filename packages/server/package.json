@@ -13,11 +13,13 @@
   "dependencies": {
     "@cambio/shared": "^0.1.0",
     "express": "^5.2.1",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.4",
+    "socket.io-client": "^4.8.4",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15"
   }
