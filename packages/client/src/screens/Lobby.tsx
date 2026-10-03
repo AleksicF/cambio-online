@@ -194,7 +194,35 @@ function SettingsForm({
         </span>
       </label>
       {settings.turnTimeLimit !== null && number('turnTimeLimit', 'Sekunden pro Zug', 's')}
-      {number('snapWindow', 'Abwurf-Fenster', 's')}
+      <label className="setting">
+        <span>Abwerfen möglich</span>
+        <select
+          value={settings.snapWindowMode}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({ snapWindowMode: e.target.value as GameSettings['snapWindowMode'] })
+          }
+        >
+          <option value="timed">für feste Zeit</option>
+          <option value="untilNextCard">bis zur nächsten Karte</option>
+        </select>
+      </label>
+      {number(
+        'snapWindow',
+        settings.snapWindowMode === 'timed' ? 'Abwurf-Fenster' : 'Abwurf-Fenster am Partie-Ende',
+        's',
+      )}
+      <label className="setting">
+        <span>Strafkarten</span>
+        <select
+          value={settings.escalatingPenalty ? 'escalating' : 'single'}
+          disabled={disabled}
+          onChange={(e) => onChange({ escalatingPenalty: e.target.value === 'escalating' })}
+        >
+          <option value="escalating">steigend (1, 2, 3 …)</option>
+          <option value="single">immer 1 pro Fehler</option>
+        </select>
+      </label>
       {number('peekDuration', 'Anschauzeit', 's')}
       {number('cambioFromLap', 'Cambio ab Umlauf')}
       {number('maxPlayers', 'Max. Spieler')}

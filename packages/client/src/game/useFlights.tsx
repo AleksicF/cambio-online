@@ -8,6 +8,8 @@ interface FlightPlan {
   to: string;
   card: Card | null;
   delay: number;
+  /** Zielkarte nach der Landung kurz markieren (nicht beim Austeilen). */
+  markLanding: boolean;
 }
 
 interface Flight extends FlightPlan {
@@ -16,24 +18,29 @@ interface Flight extends FlightPlan {
   toRect: DOMRect;
 }
 
-const DURATION = 0.4;
-const STEP = 0.12;
-const DEAL_STEP = 0.035;
+/** Sekunden pro Kartenflug. */
+const DURATION = 0.8;
+/** Sekunden zwischen aufeinanderfolgenden Flügen (z. B. Karte rein, alte Karte raus). */
+const STEP = 0.55;
+/** Sekunden zwischen zwei Karten beim Austeilen. */
+const DEAL_STEP = 0.06;
+/** Wie lange eine neu gelandete Karte markiert bleibt (ms). */
+const LANDED_MS = 2000;
 const FLIGHT_GRACE_MS = 300;
 
 /** Übersetzt Spielereignisse in Kartenbewegungen zwischen DOM-Ankern. */
 function planFlights(update: GameUpdate): FlightPlan[] {
   const plans: FlightPlan[] = [];
   let t = 0;
-  const add = (from: string, to: string, card: Card | null = null) =>
-    plans.push({ from, to, card, delay: t });
+  const add = (from: string, to: string, card: Card | null = null, markLanding = true) =>
+    plans.push({ from, to, card, delay: t, markLanding: markLanding && to.startsWith('slot:') });
 
   for (const e of update.events) {
     switch (e.type) {
       case 'partieStarted':
         for (let i = 0; i < 4; i++) {
           for (const p of update.view.players) {
-            add(DECK, slotAnchor({ playerId: p.id, slot: i }));
+            add(DECK, slotAnchor({ playerId: p.id, slot: i }), null, false);
             t += DEAL_STEP;
           }
         }
@@ -42,7 +49,9 @@ function planFlights(update: GameUpdate): FlightPlan[] {
         add(DECK, DRAWN, e.card ?? null);
         break;
       case 'swappedDrawn':
+        // Nacheinander: erst die neue Karte in die Auslage, dann die alte auf die Ablage.
         add(DRAWN, slotAnchor({ playerId: e.playerId, slot: e.slot }));
+        t += STEP;
         add(slotAnchor({ playerId: e.playerId, slot: e.slot }), DISCARD, e.discarded);
         break;
       case 'discardedDrawn':
@@ -50,6 +59,7 @@ function planFlights(update: GameUpdate): FlightPlan[] {
         break;
       case 'tookDiscard':
         add(DISCARD, slotAnchor({ playerId: e.playerId, slot: e.slot }), e.card);
+        t += STEP;
         add(slotAnchor({ playerId: e.playerId, slot: e.slot }), DISCARD, e.discarded);
         break;
       case 'cardsSwapped':
@@ -89,8 +99,20 @@ export function useFlights(update: GameUpdate | null) {
   const processed = useRef<GameUpdate | null>(null);
   const nextId = useRef(0);
 
-  const remove = useCallback((id: number) => {
-    setFlights((f) => f.filter((flight) => flight.id !== id));
+  const [landed, setLanded] = useState<Set<string>>(new Set());
+
+  /** Flug beendet: Karte entfernen und Landeplatz kurz markieren. */
+  const finish = useCallback((flight: Flight) => {
+    setFlights((f) => f.filter((other) => other.id !== flight.id));
+    if (!flight.markLanding) return;
+    setLanded((l) => new Set(l).add(flight.to));
+    setTimeout(() => {
+      setLanded((l) => {
+        const next = new Set(l);
+        next.delete(flight.to);
+        return next;
+      });
+    }, LANDED_MS);
   }, []);
 
   useLayoutEffect(() => {
@@ -120,16 +142,16 @@ export function useFlights(update: GameUpdate | null) {
   const layer = (
     <div className="flight-layer" aria-hidden>
       {flights.map((f) => (
-        <FlightCard key={f.id} flight={f} onDone={remove} />
+        <FlightCard key={f.id} flight={f} onDone={finish} />
       ))}
     </div>
   );
 
-  return { hidden, layer };
+  return { hidden, landed, layer };
 }
 
 /** Eine fliegende Karte; animiert per Web Animations API von Start- zu Zielposition. */
-function FlightCard({ flight, onDone }: { flight: Flight; onDone: (id: number) => void }) {
+function FlightCard({ flight, onDone }: { flight: Flight; onDone: (flight: Flight) => void }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -146,13 +168,17 @@ function FlightCard({ flight, onDone }: { flight: Flight; onDone: (id: number) =
       easing: 'ease-in-out',
       fill: 'both',
     });
-    animation.onfinish = () => onDone(flight.id);
+    // Nur einmal beenden, auch wenn Animation und Sicherheitsnetz beide feuern.
+    let done = false;
+    const end = () => {
+      if (done) return;
+      done = true;
+      onDone(flight);
+    };
+    animation.onfinish = end;
     // Sicherheitsnetz: Die Karte verschwindet auch, wenn die Animation nicht läuft
     // (z. B. Tab im Hintergrund) – sonst bliebe die Zielkarte versteckt.
-    const fallback = setTimeout(
-      () => onDone(flight.id),
-      (flight.delay + DURATION) * 1000 + FLIGHT_GRACE_MS,
-    );
+    const fallback = setTimeout(end, (flight.delay + DURATION) * 1000 + FLIGHT_GRACE_MS);
     return () => {
       clearTimeout(fallback);
       animation.cancel();

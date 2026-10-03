@@ -8,7 +8,12 @@ export interface GameSettings {
   callerPenalty: number;
   /** `null` = kein Zeitlimit. */
   turnTimeLimit: number | null;
+  /** Sekunden, nur bei `snapWindowMode: 'timed'` (bzw. nach dem letzten Zug). */
   snapWindow: number;
+  /** Abwurf-Fenster mit fester Zeit oder offen bis zur nächsten abgelegten Karte (RULES §6). */
+  snapWindowMode: 'timed' | 'untilNextCard';
+  /** Steigende Strafkarten (n-ter Fehler = n Karten) oder immer 1 Karte. */
+  escalatingPenalty: boolean;
   peekDuration: number;
   cambioFromLap: number;
   maxPlayers: number;
@@ -22,6 +27,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   callerPenalty: 10,
   turnTimeLimit: 30,
   snapWindow: 3,
+  snapWindowMode: 'timed',
+  escalatingPenalty: true,
   peekDuration: 3,
   cambioFromLap: 3,
   maxPlayers: 6,
@@ -30,12 +37,15 @@ export const DEFAULT_SETTINGS: GameSettings = {
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 
-type NumericSetting = Exclude<
-  {
-    [K in keyof GameSettings]: GameSettings[K] extends number | null ? K : never;
-  }[keyof GameSettings],
-  undefined
->;
+type NumericSetting =
+  | 'roundCount'
+  | 'pointLimit'
+  | 'callerPenalty'
+  | 'turnTimeLimit'
+  | 'snapWindow'
+  | 'peekDuration'
+  | 'cambioFromLap'
+  | 'maxPlayers';
 
 /** Erlaubte Bereiche der Zahlen-Einstellungen (RULES §10). */
 export const SETTINGS_LIMITS: Record<NumericSetting, { min: number; max: number }> = {
@@ -65,6 +75,10 @@ export function mergeSettings(base: GameSettings, input: unknown): GameSettings 
   if (raw.endCondition === 'rounds' || raw.endCondition === 'pointLimit') {
     result.endCondition = raw.endCondition;
   }
+  if (raw.snapWindowMode === 'timed' || raw.snapWindowMode === 'untilNextCard') {
+    result.snapWindowMode = raw.snapWindowMode;
+  }
+  if (typeof raw.escalatingPenalty === 'boolean') result.escalatingPenalty = raw.escalatingPenalty;
   for (const key of Object.keys(SETTINGS_LIMITS) as NumericSetting[]) {
     const value = raw[key];
     if (key === 'turnTimeLimit' && value === null) result.turnTimeLimit = null;

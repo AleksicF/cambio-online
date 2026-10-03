@@ -16,6 +16,18 @@ describe('mergeSettings', () => {
     expect(s.pointLimit).toBe(121);
   });
 
+  it('übernimmt Abwurf-Modus und Strafkarten-Art', () => {
+    const s = mergeSettings(DEFAULT_SETTINGS, {
+      snapWindowMode: 'untilNextCard',
+      escalatingPenalty: false,
+    });
+    expect(s.snapWindowMode).toBe('untilNextCard');
+    expect(s.escalatingPenalty).toBe(false);
+    expect(
+      mergeSettings(DEFAULT_SETTINGS, { snapWindowMode: 'x', escalatingPenalty: 'nein' }),
+    ).toEqual(DEFAULT_SETTINGS);
+  });
+
   it('erlaubt ein abgeschaltetes Zeitlimit', () => {
     expect(mergeSettings(DEFAULT_SETTINGS, { turnTimeLimit: null }).turnTimeLimit).toBeNull();
   });

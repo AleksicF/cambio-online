@@ -5,17 +5,23 @@ import { DISCARD, slotAnchor } from './anchors';
 
 /** Toleranz um die Ablage herum, damit das Treffen auch am Handy leicht fällt. */
 const DROP_MARGIN = 20;
+/** Ab so vielen Pixeln Bewegung wird aus einem Klick ein Ziehen. */
+const DRAG_THRESHOLD = 6;
 
 interface Drag {
-  /** Zu welchem Abwurf-Fenster das Ziehen gehört. */
+  /** Zu welcher Abwurf-Gelegenheit das Ziehen gehört. */
   windowKey: string;
   ref: SlotRef;
+  startX: number;
+  startY: number;
   x: number;
   y: number;
   offsetX: number;
   offsetY: number;
   width: number;
   height: number;
+  /** Erst nach DRAG_THRESHOLD Pixeln aktiv – vorher ist es (noch) ein Klick. */
+  active: boolean;
   overDiscard: boolean;
 }
 
@@ -34,8 +40,9 @@ function isOverDiscard(x: number, y: number): boolean {
 /**
  * Abwerfen per Ziehen: Karte greifen und auf der Ablage loslassen.
  * Läuft über Pointer-Events und funktioniert damit mit Maus und Touch.
- * `windowKey` identifiziert das offene Abwurf-Fenster (`null` = keins). Endet
- * das Fenster, verfällt ein laufendes Ziehen automatisch.
+ * Ein Klick ohne Bewegung bleibt ein normaler Klick (für Zug-Aktionen).
+ * `windowKey` identifiziert die aktuelle Abwurf-Gelegenheit (`null` = keine).
+ * Ändert sie sich, verfällt ein laufendes Ziehen automatisch.
  */
 export function useSnapDrag(windowKey: string | null, onDrop: (ref: SlotRef) => void) {
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -51,15 +58,22 @@ export function useSnapDrag(windowKey: string | null, onDrop: (ref: SlotRef) => 
   useEffect(() => {
     if (!dragKey) return;
     const move = (e: PointerEvent) =>
-      setDrag((d) =>
-        d
-          ? { ...d, x: e.clientX, y: e.clientY, overDiscard: isOverDiscard(e.clientX, e.clientY) }
-          : d,
-      );
+      setDrag((d) => {
+        if (!d) return d;
+        const active =
+          d.active || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= DRAG_THRESHOLD;
+        return {
+          ...d,
+          active,
+          x: e.clientX,
+          y: e.clientY,
+          overDiscard: active && isOverDiscard(e.clientX, e.clientY),
+        };
+      });
     const up = (e: PointerEvent) => {
       const d = latest.current;
       setDrag(null);
-      if (d && isOverDiscard(e.clientX, e.clientY)) onDropRef.current(d.ref);
+      if (d?.active && isOverDiscard(e.clientX, e.clientY)) onDropRef.current(d.ref);
     };
     const cancel = () => setDrag(null);
     window.addEventListener('pointermove', move);
@@ -74,34 +88,37 @@ export function useSnapDrag(windowKey: string | null, onDrop: (ref: SlotRef) => 
 
   function start(ref: SlotRef, e: React.PointerEvent<HTMLElement>) {
     if (!windowKey || e.button !== 0) return;
-    e.preventDefault();
     const r = e.currentTarget.getBoundingClientRect();
     setDrag({
       windowKey,
       ref,
+      startX: e.clientX,
+      startY: e.clientY,
       x: e.clientX,
       y: e.clientY,
       offsetX: e.clientX - r.left,
       offsetY: e.clientY - r.top,
       width: r.width,
       height: r.height,
+      active: false,
       overDiscard: false,
     });
   }
 
-  const ghost = current && (
+  const activeDrag = current?.active ? current : null;
+  const ghost = activeDrag && (
     <div
       className="card card--dragging"
       aria-hidden
       style={{
-        width: current.width,
-        height: current.height,
-        transform: `translate(${current.x - current.offsetX}px, ${current.y - current.offsetY}px)`,
+        width: activeDrag.width,
+        height: activeDrag.height,
+        transform: `translate(${activeDrag.x - activeDrag.offsetX}px, ${activeDrag.y - activeDrag.offsetY}px)`,
       }}
     >
       <CardBack />
     </div>
   );
 
-  return { start, dragging: current, ghost };
+  return { start, dragging: activeDrag, ghost };
 }

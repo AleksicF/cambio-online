@@ -1,6 +1,6 @@
 import type { Card } from '../cards';
 import type { GameSettings } from '../settings';
-import { canCallCambio, currentPlayer, mustCallCambio } from './engine';
+import { canCallCambio, currentPlayer, mustCallCambio, snapAllowed } from './engine';
 import type { Ability, AudiencedEvent, GameEvent, GameState, PartieResult, SlotRef } from './types';
 
 /**
@@ -21,6 +21,8 @@ export interface PlayerView {
   cambioCallerId: string | null;
   canCallCambio: boolean;
   mustCallCambio: boolean;
+  /** Abwerfen ist gerade möglich (Abwurf-Fenster oder offen bis zur nächsten Karte). */
+  snapAllowed: boolean;
   results: PartieResult[];
 }
 
@@ -50,9 +52,15 @@ export function getPlayerView(s: GameState, playerId: string): PlayerView {
   const revealAll = s.phase.type === 'partieEnd' || s.phase.type === 'gameEnd';
   const active = currentPlayer(s);
 
-  let phase: PhaseView = s.phase;
+  let phase: PhaseView;
   if (s.phase.type === 'drawn' && active.id !== playerId) {
     phase = { type: 'drawn', card: null };
+  } else if (s.phase.type === 'snapGive') {
+    // Die unterbrochene Phase kann eine gezogene Karte enthalten – nie mitschicken.
+    const { snapperId, target } = s.phase;
+    phase = { type: 'snapGive', snapperId, target };
+  } else {
+    phase = s.phase;
   }
 
   return {
@@ -75,6 +83,7 @@ export function getPlayerView(s: GameState, playerId: string): PlayerView {
     cambioCallerId: s.cambioCallerId,
     canCallCambio: me ? canCallCambio(s, me) : false,
     mustCallCambio: me ? active.id === playerId && mustCallCambio(s, me) : false,
+    snapAllowed: snapAllowed(s),
     results: s.results,
   };
 }

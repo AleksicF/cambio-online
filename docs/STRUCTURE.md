@@ -108,7 +108,10 @@ Nicht von Hand ändern: `package-lock.json` (wird von npm verwaltet),
 | Hinweistexte am Spieltisch ändern                | `game/Game.tsx` → Funktion `Prompt`; Fähigkeiten in `game/interaction.ts`                                             |
 | Protokoll-Texte ändern                           | `game/useEventFeed.ts`                                                                                                |
 | Fehlermeldungen ändern                           | `net/errors.ts`                                                                                                       |
-| Animationstempo ändern                           | `game/useFlights.tsx` → `DURATION` (Sekunden pro Flug), `STEP` (Abstand zwischen Flügen)                              |
+| Dauer der Landungs-Markierung                    | `game/useFlights.tsx` → `LANDED_MS` (Millisekunden)                                                                   |
+| Steuerung standardmäßig „Alles klicken“          | `packages/client/src/prefs.ts` → bei `snapMode` den letzten Wert `'drag'` auf `'click'`                               |
+| Anordnung der Karten (2 Reihen, neue rechts)     | `game/Game.tsx` → `slotPosition`                                                                                      |
+| Animationstempo ändern                           | `game/useFlights.tsx` → `DURATION` (Sekunden pro Flug), `STEP` (Abstand zwischen Flügen), `DEAL_STEP` (Austeilen)     |
 | Standardwerte der Lobby-Einstellungen            | `packages/shared/src/settings.ts` → `DEFAULT_SETTINGS`                                                                |
 | Erlaubte Bereiche der Einstellungen              | `settings.ts` → `SETTINGS_LIMITS`                                                                                     |
 | Kartenwerte ändern (z. B. schwarzer König)       | `packages/shared/src/cards.ts` → `cardValue`                                                                          |

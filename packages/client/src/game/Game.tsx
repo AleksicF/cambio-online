@@ -17,6 +17,7 @@ import {
   ABILITY_SHORT,
   ABILITY_TEXT,
   EMPTY_SELECTION,
+  canSnapCard,
   clickCard,
   isSelectable,
   type LocalSelection,
@@ -38,7 +39,7 @@ interface GameProps {
 export function Game({ update, room, deadline }: GameProps) {
   const { view } = update;
   const [error, setError] = useState<string | null>(null);
-  const { hidden, layer } = useFlights(update);
+  const { hidden, landed, layer } = useFlights(update);
   const { reveals, highlights, log } = useEventFeed(update);
 
   // Lokale Auswahl gilt nur für die Phase, in der sie getroffen wurde.
@@ -49,7 +50,11 @@ export function Game({ update, room, deadline }: GameProps) {
 
   const snapMode = useSnapMode();
   const showHelp = useShowHelp();
-  const snapWindowKey = view.phase.type === 'snapWindow' && snapMode === 'drag' ? phaseKey : null;
+  // Eine Abwurf-Gelegenheit gilt für genau eine oberste Ablagekarte.
+  const snapWindowKey =
+    view.snapAllowed && snapMode === 'drag'
+      ? `${view.partieNumber}:${view.discardCount}:${view.discardTop?.id ?? ''}`
+      : null;
   const snapDrag = useSnapDrag(snapWindowKey, (target) => void send({ type: 'snap', target }));
 
   const names = new Map(view.players.map((p) => [p.id, p.name]));
@@ -66,7 +71,7 @@ export function Game({ update, room, deadline }: GameProps) {
   }
 
   function onCard(ref: SlotRef) {
-    const result = clickCard(view, selection, ref);
+    const result = clickCard(view, selection, ref, snapMode === 'click');
     if (result.kind === 'action') {
       setSelection(EMPTY_SELECTION);
       void send(result.action);
@@ -96,6 +101,7 @@ export function Game({ update, room, deadline }: GameProps) {
         reveals={reveals}
         highlights={highlights}
         revealAll={revealAll}
+        landed={landed}
         onCard={onCard}
         snapMode={snapMode}
         dragging={snapDrag.dragging?.ref ?? null}
@@ -133,128 +139,137 @@ export function Game({ update, room, deadline }: GameProps) {
         </span>
       </header>
 
-      <section className="opponents">
-        {opponents.map((p) => (
-          <PlayerPanel
-            key={p.id}
-            player={p}
-            view={view}
-            connected={room.players.find((r) => r.id === p.id)?.connected ?? false}
-          >
-            {renderHand(p, true)}
+      <div className="game__table">
+        <section className="opponents">
+          {opponents.map((p) => (
+            <PlayerPanel
+              key={p.id}
+              player={p}
+              view={view}
+              connected={room.players.find((r) => r.id === p.id)?.connected ?? false}
+            >
+              {renderHand(p, true)}
+            </PlayerPanel>
+          ))}
+        </section>
+
+        <section className="center">
+          <div className="pile">
+            <CardView
+              card={null}
+              anchor={DECK}
+              marks={canDraw ? ['selectable'] : []}
+              onClick={canDraw ? onDeck : undefined}
+              title="Nachziehstapel"
+            />
+            <span className="pile__label">Stapel · {view.drawPileCount}</span>
+          </div>
+
+          <div className="pile">
+            {view.discardTop ? (
+              <CardView
+                card={view.discardTop}
+                anchor={DISCARD}
+                hidden={hidden.has(DISCARD)}
+                marks={
+                  snapDrag.dragging
+                    ? [snapDrag.dragging.overDiscard ? 'drop-target' : 'drop-zone']
+                    : selection.takingDiscard
+                      ? ['selected']
+                      : canDraw || (myTurn && view.phase.type === 'drawn')
+                        ? ['selectable']
+                        : []
+                }
+                onClick={onDiscard}
+              />
+            ) : (
+              <EmptySlot anchor={DISCARD} />
+            )}
+            <span className="pile__label">Ablage</span>
+            {showHelp && view.discardTop && (
+              <span className="pile__hint">{cardHint(view.discardTop, false)}</span>
+            )}
+          </div>
+
+          <div className="pile">
+            {drawnCard !== undefined ? (
+              <CardView
+                card={drawnCard}
+                anchor={DRAWN}
+                hidden={hidden.has(DRAWN)}
+                title="Gezogene Karte"
+              />
+            ) : (
+              <EmptySlot anchor={DRAWN} />
+            )}
+            <span className="pile__label">{drawnCard !== undefined ? 'Gezogen' : ' '}</span>
+            {showHelp && drawnCard && (
+              <span className="pile__hint">{cardHint(drawnCard, true)}</span>
+            )}
+          </div>
+        </section>
+
+        <section className="status">
+          <TimerBar deadline={deadline} key={`${deadline}`} />
+          <Prompt view={view} selection={selection} name={name} snapMode={snapMode} />
+          <div className="status__actions">
+            {myTurn && view.phase.type === 'turn' && selection.takingDiscard && (
+              <button
+                type="button"
+                className="button"
+                onClick={() => setSelection(EMPTY_SELECTION)}
+              >
+                Abbrechen
+              </button>
+            )}
+            {myTurn && view.phase.type === 'drawn' && (
+              <button
+                type="button"
+                className="button"
+                onClick={() => void send({ type: 'discardDrawn' })}
+              >
+                Ablegen
+              </button>
+            )}
+            {myTurn && (view.phase.type === 'ability' || view.phase.type === 'kingSwap') && (
+              <button
+                type="button"
+                className="button"
+                onClick={() => void send({ type: 'skipAbility' })}
+              >
+                {view.phase.type === 'kingSwap' ? 'Nicht tauschen' : 'Überspringen'}
+              </button>
+            )}
+            {view.canCallCambio && (
+              <button
+                type="button"
+                className="button button--primary"
+                onClick={() => void send({ type: 'callCambio' })}
+              >
+                Cambio rufen
+              </button>
+            )}
+          </div>
+          {error && <p className="error">{error}</p>}
+        </section>
+
+        <section className="me">
+          <PlayerPanel player={me} view={view} connected>
+            {renderHand(me, false)}
           </PlayerPanel>
-        ))}
-      </section>
+        </section>
 
-      <section className="center">
-        <div className="pile">
-          <CardView
-            card={null}
-            anchor={DECK}
-            marks={canDraw ? ['selectable'] : []}
-            onClick={canDraw ? onDeck : undefined}
-            title="Nachziehstapel"
-          />
-          <span className="pile__label">Stapel · {view.drawPileCount}</span>
-        </div>
+        {revealAll && <Results view={view} room={room} />}
+      </div>
 
-        <div className="pile">
-          {view.discardTop ? (
-            <CardView
-              card={view.discardTop}
-              anchor={DISCARD}
-              hidden={hidden.has(DISCARD)}
-              marks={
-                snapDrag.dragging
-                  ? [snapDrag.dragging.overDiscard ? 'drop-target' : 'drop-zone']
-                  : selection.takingDiscard
-                    ? ['selected']
-                    : canDraw || (myTurn && view.phase.type === 'drawn')
-                      ? ['selectable']
-                      : []
-              }
-              onClick={onDiscard}
-            />
-          ) : (
-            <EmptySlot anchor={DISCARD} />
-          )}
-          <span className="pile__label">Ablage</span>
-          {showHelp && view.discardTop && (
-            <span className="pile__hint">{cardHint(view.discardTop, false)}</span>
-          )}
-        </div>
-
-        <div className="pile">
-          {drawnCard !== undefined ? (
-            <CardView
-              card={drawnCard}
-              anchor={DRAWN}
-              hidden={hidden.has(DRAWN)}
-              title="Gezogene Karte"
-            />
-          ) : (
-            <EmptySlot anchor={DRAWN} />
-          )}
-          <span className="pile__label">{drawnCard !== undefined ? 'Gezogen' : ' '}</span>
-          {showHelp && drawnCard && <span className="pile__hint">{cardHint(drawnCard, true)}</span>}
-        </div>
-      </section>
-
-      <section className="status">
-        <TimerBar deadline={deadline} key={`${deadline}`} />
-        <Prompt view={view} selection={selection} name={name} snapMode={snapMode} />
-        <div className="status__actions">
-          {myTurn && view.phase.type === 'turn' && selection.takingDiscard && (
-            <button type="button" className="button" onClick={() => setSelection(EMPTY_SELECTION)}>
-              Abbrechen
-            </button>
-          )}
-          {myTurn && view.phase.type === 'drawn' && (
-            <button
-              type="button"
-              className="button"
-              onClick={() => void send({ type: 'discardDrawn' })}
-            >
-              Ablegen
-            </button>
-          )}
-          {myTurn && (view.phase.type === 'ability' || view.phase.type === 'kingSwap') && (
-            <button
-              type="button"
-              className="button"
-              onClick={() => void send({ type: 'skipAbility' })}
-            >
-              {view.phase.type === 'kingSwap' ? 'Nicht tauschen' : 'Überspringen'}
-            </button>
-          )}
-          {view.canCallCambio && (
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={() => void send({ type: 'callCambio' })}
-            >
-              Cambio rufen
-            </button>
-          )}
-        </div>
-        {error && <p className="error">{error}</p>}
-      </section>
-
-      <section className="me">
-        <PlayerPanel player={me} view={view} connected>
-          {renderHand(me, false)}
-        </PlayerPanel>
-      </section>
-
-      {showHelp && !revealAll && <HelpPanel />}
-
-      {revealAll && <Results view={view} room={room} />}
-
-      <section className="log" aria-live="polite">
-        {log.map((line, i) => (
-          <p key={`${i}:${line}`}>{line}</p>
-        ))}
-      </section>
+      <aside className="game__side">
+        {showHelp && !revealAll && <HelpPanel />}
+        <section className="log" aria-live="polite">
+          {log.map((line, i) => (
+            <p key={`${i}:${line}`}>{line}</p>
+          ))}
+        </section>
+      </aside>
 
       {layer}
       {snapDrag.ghost}
@@ -291,6 +306,16 @@ function PlayerPanel({
   );
 }
 
+/**
+ * Feste Plätze in zwei Reihen: 0 1 oben, 2 3 unten (die unteren werden zu
+ * Beginn angesehen). Weitere Karten kommen spaltenweise rechts daneben.
+ */
+function slotPosition(i: number): React.CSSProperties {
+  if (i < 4) return { gridRow: i < 2 ? 1 : 2, gridColumn: (i % 2) + 1 };
+  const j = i - 4;
+  return { gridRow: (j % 2) + 1, gridColumn: 3 + Math.floor(j / 2) };
+}
+
 function Hand({
   player,
   view,
@@ -300,6 +325,7 @@ function Hand({
   reveals,
   highlights,
   revealAll,
+  landed,
   onCard,
   snapMode,
   dragging,
@@ -313,12 +339,12 @@ function Hand({
   reveals: Map<string, Card>;
   highlights: Set<string>;
   revealAll: boolean;
+  landed: Set<string>;
   onCard: (ref: SlotRef) => void;
   snapMode: SnapMode;
   dragging: SlotRef | null;
   onDragStart: (ref: SlotRef, e: React.PointerEvent<HTMLElement>) => void;
 }) {
-  const dragToSnap = view.phase.type === 'snapWindow' && snapMode === 'drag';
   const sum = revealAll
     ? player.slots.reduce((s, slot) => s + (slot?.card ? cardValue(slot.card) : 0), 0)
     : null;
@@ -329,30 +355,39 @@ function Hand({
         {player.slots.map((slot, i) => {
           const ref = { playerId: player.id, slot: i };
           const anchor = slotAnchor(ref);
-          if (!slot) return <EmptySlot key={i} small={small} anchor={anchor} />;
-          const selectable = isSelectable(view, selection, ref);
+          const position = slotPosition(i);
+          if (!slot) {
+            return (
+              <div key={i} className="hand__slot" style={position}>
+                <EmptySlot small={small} anchor={anchor} />
+              </div>
+            );
+          }
+          const selectable = isSelectable(view, selection, ref, snapMode === 'click');
           const marks: CardMark[] = [];
           if (selection.picked.some((p) => p.playerId === ref.playerId && p.slot === ref.slot)) {
             marks.push('selected');
           } else if (selectable) marks.push('selectable');
           if (highlights.has(anchor)) marks.push('highlight');
+          if (landed.has(anchor)) marks.push('landed');
           if (view.cambioCallerId === player.id && !revealAll) marks.push('locked');
-          const draggable = selectable && dragToSnap;
+          const draggable = snapMode === 'drag' && canSnapCard(view, ref);
           if (draggable) marks.push('draggable');
           if (dragging?.playerId === ref.playerId && dragging.slot === ref.slot) {
             marks.push('dragging');
           }
           return (
-            <CardView
-              key={i}
-              card={slot.card ?? reveals.get(anchor) ?? null}
-              small={small}
-              anchor={anchor}
-              hidden={hidden.has(anchor)}
-              marks={marks}
-              onClick={selectable && !draggable ? () => onCard(ref) : undefined}
-              onPointerDown={draggable ? (e) => onDragStart(ref, e) : undefined}
-            />
+            <div key={i} className="hand__slot" style={position}>
+              <CardView
+                card={slot.card ?? reveals.get(anchor) ?? null}
+                small={small}
+                anchor={anchor}
+                hidden={hidden.has(anchor)}
+                marks={marks}
+                onClick={selectable ? () => onCard(ref) : undefined}
+                onPointerDown={draggable ? (e) => onDragStart(ref, e) : undefined}
+              />
+            </div>
           );
         })}
       </div>
@@ -429,9 +464,17 @@ function Prompt({
       text = 'Alle Karten sind aufgedeckt.';
       break;
   }
+  const snapStillOpen =
+    view.snapAllowed && phase.type !== 'snapWindow' && view.cambioCallerId !== me
+      ? snapMode === 'drag'
+        ? 'Abwerfen auf die offene Karte ist noch möglich – Karte auf die Ablage ziehen.'
+        : 'Abwerfen auf die offene Karte ist noch möglich.'
+      : '';
+
   return (
     <p className="prompt">
       {text}
+      {snapStillOpen && <span className="muted">{snapStillOpen}</span>}
       {lastRound && <span className="muted">{lastRound}</span>}
     </p>
   );

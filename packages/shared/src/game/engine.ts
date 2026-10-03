@@ -8,6 +8,7 @@ import type {
   GameError,
   GameEvent,
   GameState,
+  Phase,
   PlayerAction,
   PlayerState,
   SlotRef,
@@ -63,6 +64,7 @@ export function createGame(
     lap: 1,
     partieNumber: 0,
     cambioCallerId: null,
+    snapOpen: false,
     finalTurnsLeft: 0,
     results: [],
   };
@@ -80,6 +82,7 @@ function startPartie(s: GameState, ctx: Ctx) {
   s.currentPlayerIndex = s.startingPlayerIndex;
   s.lap = 1;
   s.cambioCallerId = null;
+  s.snapOpen = false;
   s.finalTurnsLeft = 0;
 
   const deck = shuffle(createDeck(), ctx.random);
@@ -159,6 +162,13 @@ export function canCallCambio(s: GameState, p: PlayerState): boolean {
   );
 }
 
+const TURN_PHASES = new Set<Phase['type']>(['turn', 'drawn', 'ability', 'kingSwap']);
+
+/** Darf gerade abgeworfen werden (RULES §6)? */
+export function snapAllowed(s: GameState): boolean {
+  return s.phase.type === 'snapWindow' || (s.snapOpen && TURN_PHASES.has(s.phase.type));
+}
+
 export function abilityOf(card: Card): Ability | null {
   if (card.kind === 'joker') return null;
   switch (card.rank) {
@@ -218,7 +228,7 @@ function handlePlayerAction(
           discarded,
         }),
       );
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
@@ -233,7 +243,7 @@ function handlePlayerAction(
       ctx.events.push(
         toAll({ type: 'swappedDrawn', playerId: player.id, slot: action.slot, discarded }),
       );
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
@@ -258,7 +268,7 @@ function handlePlayerAction(
       const err = checkOwnSlot(player, action.slot);
       if (err) return err;
       peek(s, player, { playerId: player.id, slot: action.slot }, ctx);
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
@@ -269,7 +279,7 @@ function handlePlayerAction(
       const err = checkTarget(s, action.target);
       if (err) return err;
       peek(s, player, action.target, ctx);
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
@@ -278,7 +288,7 @@ function handlePlayerAction(
       if (!isCurrent) return 'notYourTurn';
       const err = swapCards(s, player, action.a, action.b, ctx);
       if (err) return err;
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
@@ -297,7 +307,7 @@ function handlePlayerAction(
       if (!isCurrent) return 'notYourTurn';
       const err = swapCards(s, player, action.a, action.b, ctx);
       if (err) return err;
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
@@ -305,12 +315,12 @@ function handlePlayerAction(
       if (phase.type !== 'ability' && phase.type !== 'kingSwap') return 'wrongPhase';
       if (!isCurrent) return 'notYourTurn';
       ctx.events.push(toAll({ type: 'abilitySkipped', playerId: player.id }));
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     }
 
     case 'snap': {
-      if (phase.type !== 'snapWindow') return 'wrongPhase';
+      if (!snapAllowed(s)) return 'wrongPhase';
       if (player.id === s.cambioCallerId) return 'callerCannotAct';
       const err = checkTarget(s, action.target);
       if (err) return err;
@@ -369,7 +379,7 @@ function handleTimeout(s: GameState, ctx: Ctx): GameError | null {
       } else {
         const card = drawToHand(s, player, ctx);
         if (card) discardDrawn(s, player, card, false, ctx);
-        else openSnapWindow(s);
+        else openSnapWindow(s, ctx);
       }
       return null;
     case 'drawn':
@@ -378,7 +388,7 @@ function handleTimeout(s: GameState, ctx: Ctx): GameError | null {
     case 'ability':
     case 'kingSwap':
       ctx.events.push(toAll({ type: 'abilitySkipped', playerId: player.id }));
-      openSnapWindow(s);
+      openSnapWindow(s, ctx);
       return null;
     case 'snapWindow':
       closeSnapWindow(s, ctx);
@@ -418,11 +428,13 @@ function discardDrawn(
   allowAbility: boolean,
   ctx: Ctx,
 ) {
+  // Neue Karte auf der Ablage: Abwerfen auf die alte endet; auf die neue erst nach der Fähigkeit.
+  s.snapOpen = false;
   s.discardPile.push(card);
   ctx.events.push(toAll({ type: 'discardedDrawn', playerId: player.id, card }));
   const ability = allowAbility ? abilityOf(card) : null;
   if (ability) s.phase = { type: 'ability', ability };
-  else openSnapWindow(s);
+  else openSnapWindow(s, ctx);
 }
 
 /** Zieht vom Nachziehstapel; mischt bei Bedarf den Ablagestapel ein (RULES §9). */
@@ -476,18 +488,27 @@ function snap(s: GameState, snapper: PlayerState, target: SlotRef, ctx: Ctx) {
     owner.slots[target.slot] = null;
     s.discardPile.push(card);
     ctx.events.push(toAll({ type: 'snapSucceeded', snapperId: snapper.id, target, card }));
-    if (owner.id !== snapper.id && cardCount(snapper) > 0) {
-      s.phase = { type: 'snapGive', snapperId: snapper.id, target };
-    } else {
-      closeSnapWindow(s, ctx);
+    const mustGive = owner.id !== snapper.id && cardCount(snapper) > 0;
+
+    if (s.phase.type === 'snapWindow') {
+      if (mustGive) s.phase = { type: 'snapGive', snapperId: snapper.id, target, resume: null };
+      else closeSnapWindow(s, ctx);
+      return;
+    }
+    // Abwerfen während eines Zugs: Nur der erste richtige Abwurf zählt,
+    // der unterbrochene Zug geht nach dem Abgeben weiter.
+    s.snapOpen = false;
+    if (mustGive) {
+      s.phase = { type: 'snapGive', snapperId: snapper.id, target, resume: s.phase };
     }
     return;
   }
 
-  // Falsch: Karte bleibt liegen, n-ter Fehler kostet n Strafkarten.
+  // Falsch: Karte bleibt liegen. Steigend: n-ter Fehler kostet n Strafkarten.
   snapper.errorCount++;
+  const count = s.settings.escalatingPenalty ? snapper.errorCount : 1;
   let penaltyCards = 0;
-  for (let i = 0; i < snapper.errorCount; i++) {
+  for (let i = 0; i < count; i++) {
     const penalty = drawCard(s, ctx);
     if (!penalty) break;
     snapper.slots.push(penalty);
@@ -501,11 +522,38 @@ function giveCard(s: GameState, giver: PlayerState, slot: number, to: SlotRef, c
   receiver.slots[to.slot] = giver.slots[slot]!;
   giver.slots[slot] = null;
   ctx.events.push(toAll({ type: 'cardGiven', from: { playerId: giver.id, slot }, to }));
-  closeSnapWindow(s, ctx);
+  if (s.phase.type === 'snapGive' && s.phase.resume) s.phase = s.phase.resume;
+  else closeSnapWindow(s, ctx);
 }
 
-function openSnapWindow(s: GameState) {
+/**
+ * Eine Karte ist durch einen Zug auf die Ablage gekommen (RULES §6).
+ * Feste Zeit: Abwurf-Fenster als eigene Phase. Bis zur nächsten Karte: Der
+ * nächste Zug beginnt sofort, Abwerfen bleibt offen – außer nach dem letzten
+ * Zug der Partie, dort gibt es ein Fenster mit fester Zeit.
+ */
+function openSnapWindow(s: GameState, ctx: Ctx) {
+  if (s.settings.snapWindowMode === 'untilNextCard' && !isLastTurn(s)) {
+    s.snapOpen = true;
+    finishTurn(s, ctx);
+    return;
+  }
+  s.snapOpen = false;
   s.phase = { type: 'snapWindow' };
+}
+
+/** Ist der laufende Zug der letzte der Partie? */
+function isLastTurn(s: GameState): boolean {
+  if (s.cambioCallerId === null) return false;
+  let left = s.finalTurnsLeft - (currentPlayer(s).id !== s.cambioCallerId ? 1 : 0);
+  let index = s.currentPlayerIndex;
+  while (left > 0) {
+    index = (index + 1) % s.players.length;
+    // Spieler ohne Karten setzen ihren letzten Zug aus.
+    if (cardCount(s.players[index]!) > 0) return false;
+    left--;
+  }
+  return true;
 }
 
 function closeSnapWindow(s: GameState, ctx: Ctx) {

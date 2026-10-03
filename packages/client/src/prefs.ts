@@ -38,9 +38,9 @@ function createPref<T extends string>(key: string, allowed: readonly T[], fallba
   return { set, use };
 }
 
-/** Abwerfen per Klick oder per Ziehen auf die Ablage. */
+/** Steuerung: Abwerfen per Ziehen (Rest klicken, Standard) oder alles per Klick. */
 export type SnapMode = 'click' | 'drag';
-const snapMode = createPref<SnapMode>('cambio.snapMode', ['click', 'drag'], 'click');
+const snapMode = createPref<SnapMode>('cambio.snapMode', ['click', 'drag'], 'drag');
 export const useSnapMode = snapMode.use;
 export const setSnapMode = snapMode.set;
 

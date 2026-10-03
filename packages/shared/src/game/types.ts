@@ -46,8 +46,11 @@ export type Phase =
   | { type: 'kingSwap'; peeked: SlotRef }
   /** Abwurf-Fenster ist offen. */
   | { type: 'snapWindow' }
-  /** Fremde Karte richtig abgeworfen: Abwerfer muss eine eigene Karte abgeben. */
-  | { type: 'snapGive'; snapperId: string; target: SlotRef }
+  /**
+   * Fremde Karte richtig abgeworfen: Abwerfer muss eine eigene Karte abgeben.
+   * `resume`: unterbrochene Zugphase (Abwerfen bis zur nächsten Karte), sonst `null`.
+   */
+  | { type: 'snapGive'; snapperId: string; target: SlotRef; resume: Phase | null }
   | { type: 'partieEnd'; result: PartieResult }
   | { type: 'gameEnd'; result: PartieResult; winners: string[] };
 
@@ -66,6 +69,8 @@ export interface GameState {
   /** Partie, beginnt bei 1. */
   partieNumber: number;
   cambioCallerId: string | null;
+  /** Abwerfen auf die oberste Ablagekarte ist noch erlaubt (Modus „bis zur nächsten Karte“). */
+  snapOpen: boolean;
   /** Verbleibende Züge nach dem Cambio-Ruf. */
   finalTurnsLeft: number;
   results: PartieResult[];

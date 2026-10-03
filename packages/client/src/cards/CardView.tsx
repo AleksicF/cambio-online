@@ -14,6 +14,7 @@ export type CardMark =
   | 'selected'
   | 'highlight'
   | 'locked'
+  | 'landed'
   | 'draggable'
   | 'dragging'
   | 'drop-zone'

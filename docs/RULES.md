@@ -68,7 +68,7 @@ Karten des Cambio-Rufers sind gesperrt und können weder angesehen noch getausch
 
 ## 6. Abwerfen (Snap)
 
-Sobald eine Karte durch einen Zug auf den Ablagestapel kommt, öffnet sich das **Abwurf-Fenster** (Standard 3 s). In dieser Zeit darf **jeder Spieler** (auch der aktive) eine verdeckte Karte mit **gleichem Rang** abwerfen. Beide Könige gelten als gleicher Rang, beide Joker ebenso.
+Sobald eine Karte durch einen Zug auf den Ablagestapel kommt, öffnet sich das **Abwurf-Fenster**. Solange es offen ist, darf **jeder Spieler** (auch der aktive) eine verdeckte Karte mit **gleichem Rang** abwerfen. Beide Könige gelten als gleicher Rang, beide Joker ebenso.
 
 | Fall                  | Folge                                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -77,14 +77,22 @@ Sobald eine Karte durch einen Zug auf den Ablagestapel kommt, öffnet sich das *
 | Fremde Karte, richtig | Karte ist weg. Der Abwerfer gibt dem Besitzer **eine eigene Karte seiner Wahl** verdeckt in den frei gewordenen Slot. |
 | Fremde Karte, falsch  | Karte geht zurück, Strafkarten für den Abwerfer.                                                                      |
 
-**Strafkarten:** Der Fehlerzähler läuft **pro Spieler** und wird zu Beginn jeder Partie auf 0 gesetzt. Der n-te Fehler kostet **n Strafkarten** (1., 2., 3. … Fehler = 1, 2, 3 … Karten). Strafkarten werden verdeckt und ungesehen in neue Slots gelegt.
+**Strafkarten:** Strafkarten werden verdeckt und ungesehen in neue Slots gelegt. Der Host wählt:
+
+- **Steigend** (Standard): Der Fehlerzähler läuft **pro Spieler** und wird zu Beginn jeder Partie auf 0 gesetzt. Der n-te Fehler kostet **n Strafkarten** (1., 2., 3. … Fehler = 1, 2, 3 … Karten).
+- **Gleichbleibend:** Jeder Fehler kostet genau **1 Strafkarte**.
+
+**Dauer des Abwurf-Fensters:** Der Host wählt:
+
+- **Feste Zeit** (Standard 3 s): Das Spiel wartet, bis das Fenster abgelaufen ist. Danach beginnt der nächste Zug.
+- **Bis zur nächsten Karte:** Der nächste Zug beginnt sofort. Abwerfen bleibt möglich, bis die nächste Karte auf den Ablagestapel kommt – also auch während der nächste Spieler zieht oder eine Fähigkeit nutzt. Wirft jemand während eines fremden Zugs eine fremde Karte richtig ab, wird der Zug für das Abgeben der Karte kurz unterbrochen. Nach dem letzten Zug einer Partie gibt es ein normales Fenster mit fester Zeit, bevor aufgedeckt wird.
 
 **Ablauf:**
 
 - Fähigkeiten (§5) werden **vor** dem Abwurf-Fenster ausgeführt. Das Fenster öffnet sich danach.
 - Nur der **erste richtige** Abwurf zählt und schließt das Fenster. Falsche Abwürfe schließen es nicht.
 - Abgeworfene Karten öffnen **kein** neues Fenster.
-- Ist das Fenster geschlossen, beginnt der nächste Zug.
+- Bei fester Zeit beginnt der nächste Zug, sobald das Fenster geschlossen ist.
 
 ## 7. Cambio & Ende der Partie
 
@@ -125,17 +133,19 @@ Mehrere Partien, die Punkte werden addiert.
 
 Der Host legt vor Spielbeginn in einem Einstellungsfenster fest:
 
-| Einstellung                         | Optionen                               | Standard     |
-| ----------------------------------- | -------------------------------------- | ------------ |
-| Spielmodus                          | Einzelspiel / Punktemodus              | Einzelspiel  |
-| Spielende (nur Punktemodus)         | nach Anzahl Partien / bei Punktegrenze | Punktegrenze |
-| Anzahl Partien                      | 1–20                                   | 5            |
-| Punktegrenze                        | 50–300                                 | 100          |
-| Strafpunkte für Rufer (Punktemodus) | 0–30                                   | 10           |
-| Zeitlimit pro Zug                   | aus / 15–120 s                         | 30 s         |
-| Abwurf-Fenster                      | 2–10 s                                 | 3 s          |
-| Anschauzeit (Start & Fähigkeiten)   | 2–10 s                                 | 3 s          |
-| Cambio frühestens ab Umlauf         | 1–5                                    | 3            |
-| Max. Spieler                        | 2–6                                    | 6            |
+| Einstellung                         | Optionen                                 | Standard     |
+| ----------------------------------- | ---------------------------------------- | ------------ |
+| Spielmodus                          | Einzelspiel / Punktemodus                | Einzelspiel  |
+| Spielende (nur Punktemodus)         | nach Anzahl Partien / bei Punktegrenze   | Punktegrenze |
+| Anzahl Partien                      | 1–20                                     | 5            |
+| Punktegrenze                        | 50–300                                   | 100          |
+| Strafpunkte für Rufer (Punktemodus) | 0–30                                     | 10           |
+| Zeitlimit pro Zug                   | aus / 15–120 s                           | 30 s         |
+| Abwurf-Fenster                      | feste Zeit / bis zur nächsten Karte      | feste Zeit   |
+| Dauer bei fester Zeit               | 2–10 s                                   | 3 s          |
+| Strafkarten                         | steigend / gleichbleibend (1 pro Fehler) | steigend     |
+| Anschauzeit (Start & Fähigkeiten)   | 2–10 s                                   | 3 s          |
+| Cambio frühestens ab Umlauf         | 1–5                                      | 3            |
+| Max. Spieler                        | 2–6                                      | 6            |
 
 Läuft das Zeitlimit ab, wird automatisch gehandelt: Eine gezogene Karte wird abgelegt (ohne Fähigkeit), eine offene Fähigkeit verfällt. Hat der Spieler noch nicht gezogen, zieht er automatisch und legt die Karte ab.

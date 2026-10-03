@@ -132,14 +132,18 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
             <strong>Abwurf-Fenster</strong> offen. Jetzt darf <strong>jeder</strong> eine verdeckte
             Karte mit dem <strong>gleichen Rang</strong> abwerfen – eine eigene oder die eines
             Gegners. Roter und schwarzer König zählen als gleicher Rang, Joker passt nur auf Joker.
-            Nur der schnellste richtige Abwurf zählt.
+            Nur der schnellste richtige Abwurf zählt. Der Host kann einstellen, dass Abwerfen
+            stattdessen möglich bleibt, <strong>bis die nächste Karte auf der Ablage liegt</strong>{' '}
+            – dann geht das Spiel sofort weiter und du kannst auch während des nächsten Zugs noch
+            abwerfen.
           </p>
           <ul>
             <li>Eigene Karte richtig: Sie ist weg – eine Karte weniger.</li>
             <li>Fremde Karte richtig: Sie ist weg, und du gibst dem Spieler eine deiner Karten.</li>
             <li>
               Falsch: Die Karte bleibt liegen und du ziehst Strafkarten – beim 1. Fehler eine, beim
-              2. Fehler zwei, beim 3. Fehler drei … (pro Partie).
+              2. Fehler zwei, beim 3. Fehler drei … (pro Partie). Der Host kann auch „immer eine
+              Strafkarte“ einstellen.
             </li>
           </ul>
         </section>
@@ -186,14 +190,15 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
               nacheinander. Mit „Überspringen“ lässt du die Fähigkeit aus.
             </li>
             <li>
-              <strong>Abwerfen:</strong> Karte anklicken oder auf die Ablage ziehen – das stellst du
-              in der Lobby unter „Deine Bedienung“ ein.
+              <strong>Abwerfen:</strong> Karte auf die Ablage ziehen. Wer lieber alles klickt,
+              stellt das in der Lobby unter „Deine Bedienung“ um.
             </li>
             <li>
               <strong>Hilfe:</strong> Oben rechts am Tisch blendest du eine Kartenübersicht mit
               Werten und Fähigkeiten ein oder aus.
             </li>
             <li>Der Balken unter der Tischmitte zeigt die verbleibende Zeit.</li>
+            <li>Gerade neu hingelegte Karten sind kurz farbig umrandet.</li>
             <li>Verbindung weg oder Seite neu geladen? Einfach neu laden – du bist wieder drin.</li>
           </ul>
           <p className="muted">

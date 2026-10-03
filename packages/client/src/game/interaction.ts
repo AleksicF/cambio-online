@@ -17,16 +17,21 @@ export type ClickResult =
 
 const sameRef = (a: SlotRef, b: SlotRef) => a.playerId === b.playerId && a.slot === b.slot;
 
-/** Darf diese Karte gerade angeklickt werden? */
-export function isSelectable(view: PlayerView, sel: LocalSelection, ref: SlotRef): boolean {
+/** Kann diese Karte gerade abgeworfen werden? */
+export function canSnapCard(view: PlayerView, ref: SlotRef): boolean {
+  return (
+    view.snapAllowed && view.me !== view.cambioCallerId && ref.playerId !== view.cambioCallerId
+  );
+}
+
+/** Ist diese Karte für eine Zug-Aktion (alles außer Abwerfen) anklickbar? */
+export function isTurnSelectable(view: PlayerView, sel: LocalSelection, ref: SlotRef): boolean {
   const { me, phase, cambioCallerId } = view;
   const own = ref.playerId === me;
   const locked = ref.playerId === cambioCallerId;
   const myTurn = view.currentPlayerId === me;
 
   switch (phase.type) {
-    case 'snapWindow':
-      return me !== cambioCallerId && !locked;
     case 'snapGive':
       return phase.snapperId === me && own;
     case 'turn':
@@ -45,14 +50,36 @@ export function isSelectable(view: PlayerView, sel: LocalSelection, ref: SlotRef
   }
 }
 
-/** Was passiert beim Klick auf eine Karte? */
-export function clickCard(view: PlayerView, sel: LocalSelection, ref: SlotRef): ClickResult {
-  if (!isSelectable(view, sel, ref)) return { kind: 'none' };
-  const { phase } = view;
+/**
+ * Anklickbar? Wird per Klick abgeworfen, zählt Abwerfen dazu.
+ * Zug-Aktionen haben immer Vorrang vor dem Abwerfen.
+ */
+export function isSelectable(
+  view: PlayerView,
+  sel: LocalSelection,
+  ref: SlotRef,
+  snapByClick: boolean,
+): boolean {
+  return isTurnSelectable(view, sel, ref) || (snapByClick && canSnapCard(view, ref));
+}
 
+/** Was passiert beim Klick auf eine Karte? */
+export function clickCard(
+  view: PlayerView,
+  sel: LocalSelection,
+  ref: SlotRef,
+  snapByClick: boolean,
+): ClickResult {
+  if (isTurnSelectable(view, sel, ref)) return turnClick(view, sel, ref);
+  if (snapByClick && canSnapCard(view, ref)) {
+    return { kind: 'action', action: { type: 'snap', target: ref } };
+  }
+  return { kind: 'none' };
+}
+
+function turnClick(view: PlayerView, sel: LocalSelection, ref: SlotRef): ClickResult {
+  const { phase } = view;
   switch (phase.type) {
-    case 'snapWindow':
-      return { kind: 'action', action: { type: 'snap', target: ref } };
     case 'snapGive':
       return { kind: 'action', action: { type: 'giveCard', slot: ref.slot } };
     case 'turn':

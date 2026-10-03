@@ -334,6 +334,7 @@ describe('Abwerfen', () => {
       type: 'snapGive',
       snapperId: 'b',
       target: { playerId: 'c', slot: 2 },
+      resume: null,
     });
     expect(errorOf(s, 'c', { type: 'giveCard', slot: 0 })).toBe('notYourTurn');
     s = act(s, 'b', { type: 'giveCard', slot: 0 });
@@ -376,6 +377,102 @@ describe('Abwerfen', () => {
     expect(errorOf(setup(), 'b', { type: 'snap', target: { playerId: 'b', slot: 0 } })).toBe(
       'wrongPhase',
     );
+  });
+});
+
+describe('Strafkarten gleichbleibend', () => {
+  it('jeder Fehler kostet genau eine Karte', () => {
+    let s = setup(
+      {
+        drawPile: [c('3'), c('3'), c('3'), c('5')],
+        hands: { b: [c('6'), c('7'), c('2'), c('2')] },
+      },
+      { escalatingPenalty: false },
+    );
+    s = act(s, 'a', { type: 'drawFromDeck' });
+    s = act(s, 'a', { type: 'discardDrawn' });
+    s = act(s, 'b', { type: 'snap', target: { playerId: 'b', slot: 0 } });
+    s = act(s, 'b', { type: 'snap', target: { playerId: 'b', slot: 1 } });
+    expect(s.players[1]!.slots).toHaveLength(6);
+    expect(s.players[1]!.errorCount).toBe(2);
+  });
+});
+
+describe('Abwerfen bis zur nächsten Karte', () => {
+  const settings = { snapWindowMode: 'untilNextCard', cambioFromLap: 1 } as const;
+  /** A legt eine 5 ab; danach ist sofort B am Zug. */
+  const afterFive = (hands: Layout['hands'], drawPile = [c('3'), c('3'), c('3'), c('5')]) => {
+    let s = setup({ hands, drawPile }, settings);
+    s = act(s, 'a', { type: 'drawFromDeck' });
+    return act(s, 'a', { type: 'discardDrawn' });
+  };
+
+  it('der nächste Zug beginnt sofort, Abwerfen bleibt möglich', () => {
+    const s = afterFive({ c: [c('5'), c('2')] });
+    expect(currentPlayer(s).id).toBe('b');
+    expect(s.phase.type).toBe('turn');
+    expect(getPlayerView(s, 'c').snapAllowed).toBe(true);
+    const after = act(s, 'c', { type: 'snap', target: { playerId: 'c', slot: 0 } });
+    expect(after.players[2]!.slots[0]).toBeNull();
+    expect(after.phase.type).toBe('turn');
+    expect(currentPlayer(after).id).toBe('b');
+  });
+
+  it('auch während der nächste Spieler gezogen hat', () => {
+    let s = afterFive({ c: [c('5'), c('2')] });
+    s = act(s, 'b', { type: 'drawFromDeck' });
+    s = act(s, 'c', { type: 'snap', target: { playerId: 'c', slot: 0 } });
+    expect(s.players[2]!.slots[0]).toBeNull();
+    expect(s.phase.type).toBe('drawn');
+  });
+
+  it('nur der erste richtige Abwurf zählt', () => {
+    let s = afterFive({ b: [c('5'), c('2')], c: [c('5'), c('2')] });
+    s = act(s, 'c', { type: 'snap', target: { playerId: 'c', slot: 0 } });
+    expect(errorOf(s, 'b', { type: 'snap', target: { playerId: 'b', slot: 0 } })).toBe(
+      'wrongPhase',
+    );
+  });
+
+  it('eine neue Karte auf der Ablage beendet das Abwerfen auf die alte', () => {
+    let s = afterFive({ c: [c('5'), c('9')] }, [c('3'), c('3'), c('9'), c('5')]);
+    s = act(s, 'b', { type: 'drawFromDeck' });
+    s = act(s, 'b', { type: 'discardDrawn' });
+    // Ablage zeigt jetzt die 9 (Fähigkeit) – erst nach der Fähigkeit wieder offen.
+    expect(getPlayerView(s, 'c').snapAllowed).toBe(false);
+    s = act(s, 'b', { type: 'skipAbility' });
+    expect(currentPlayer(s).id).toBe('c');
+    // Die 5 passt nicht mehr, die 9 schon.
+    const wrong = act(s, 'a', { type: 'snap', target: { playerId: 'c', slot: 0 } });
+    expect(wrong.players[0]!.errorCount).toBe(1);
+    const right = act(s, 'c', { type: 'snap', target: { playerId: 'c', slot: 1 } });
+    expect(right.players[2]!.slots[1]).toBeNull();
+  });
+
+  it('fremde Karte richtig: Zug wird zum Abgeben unterbrochen und läuft weiter', () => {
+    let s = afterFive({ a: [c('K'), c('2')], c: [c('5'), c('2')] });
+    s = act(s, 'b', { type: 'drawFromDeck' });
+    const drawn = s.phase.type === 'drawn' ? s.phase.card : null;
+    s = act(s, 'a', { type: 'snap', target: { playerId: 'c', slot: 0 } });
+    expect(s.phase.type).toBe('snapGive');
+    // Die gezogene Karte von B bleibt für andere unsichtbar.
+    expect(JSON.stringify(getPlayerView(s, 'c').phase)).not.toContain(drawn!.id);
+    expect(errorOf(s, 'b', { type: 'discardDrawn' })).toBe('wrongPhase');
+    s = act(s, 'a', { type: 'giveCard', slot: 0 });
+    expect(s.phase).toEqual({ type: 'drawn', card: drawn });
+    expect(currentPlayer(s).id).toBe('b');
+  });
+
+  it('nach dem letzten Zug der Partie gibt es ein Fenster mit fester Zeit', () => {
+    let s = setup({}, settings);
+    s = act(s, 'a', { type: 'callCambio' });
+    s = act(s, 'b', { type: 'drawFromDeck' });
+    s = act(s, 'b', { type: 'discardDrawn' });
+    expect(currentPlayer(s).id).toBe('c');
+    s = act(s, 'c', { type: 'drawFromDeck' });
+    s = act(s, 'c', { type: 'discardDrawn' });
+    expect(s.phase.type).toBe('snapWindow');
+    expect(sys(s, { type: 'closeSnapWindow' }).phase.type).toBe('gameEnd');
   });
 });
 

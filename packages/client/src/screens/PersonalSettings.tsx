@@ -1,8 +1,12 @@
 import { setShowHelp, setSnapMode, useShowHelp, useSnapMode, type SnapMode } from '../prefs';
 
 const OPTIONS: { value: SnapMode; label: string; hint: string }[] = [
-  { value: 'click', label: 'Klicken', hint: 'Karte antippen bzw. anklicken' },
-  { value: 'drag', label: 'Ziehen', hint: 'Karte auf die Ablage ziehen und loslassen' },
+  {
+    value: 'drag',
+    label: 'Abwerfen ziehen, Rest klicken',
+    hint: 'Karte zum Abwerfen auf die Ablage ziehen (Standard)',
+  },
+  { value: 'click', label: 'Alles klicken', hint: 'auch zum Abwerfen die Karte anklicken' },
 ];
 
 /** Persönliche Einstellungen, gelten nur für diesen Browser. */
@@ -26,7 +30,7 @@ function SnapModeSetting() {
   const mode = useSnapMode();
   return (
     <fieldset className="choice">
-      <legend>Abwerfen per</legend>
+      <legend>Steuerung</legend>
       {OPTIONS.map((o) => (
         <label key={o.value} className="choice__option">
           <input
