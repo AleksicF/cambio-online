@@ -3,6 +3,7 @@
 Online-Multiplayer-Version des Kartenspiels **Cambio** für 2–6 Spieler – mit Lobby, Raumcodes und Kartenanimationen.
 
 - Spielregeln: [docs/RULES.md](docs/RULES.md)
+- Eigene Kartendesigns: [docs/CARDS.md](docs/CARDS.md)
 - Architektur: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## Voraussetzungen
@@ -35,7 +36,7 @@ Zum Testen mit mehreren Spielern einfach mehrere Browser-Tabs öffnen.
 packages/
   shared/   Spiellogik, Typen, Netzwerkprotokoll (+ Tests)
   server/   Node + Socket.IO
-  client/   React + Vite + Framer Motion
+  client/   React + Vite (Animationen per Web Animations API)
 docs/       Regeln & Architektur
 ```
 

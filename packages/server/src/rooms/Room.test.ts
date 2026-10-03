@@ -77,6 +77,16 @@ describe('Lobby', () => {
     expect(room.hostId).toBe(ids[1]);
   });
 
+  it('kurz getrennter Host wird vertreten und bekommt die Rolle zurück', () => {
+    const { room, ids, rooms } = setupRoom();
+    room.setConnected(ids[0]!, false);
+    expect(room.isHost(ids[1]!)).toBe(true);
+    expect(rooms.get(ids[1]!)?.hostId).toBe(ids[1]);
+    room.setConnected(ids[0]!, true);
+    expect(room.isHost(ids[0]!)).toBe(true);
+    expect(room.isHost(ids[1]!)).toBe(false);
+  });
+
   it('Spiel braucht mindestens 2 Spieler', () => {
     const { room, ids } = setupRoom(['Anna']);
     expect(room.start(ids[0]!)).toEqual({ ok: false, error: 'notEnoughPlayers' });
@@ -167,7 +177,7 @@ describe('Spiel', () => {
     // Restliche Züge laufen per Zeitlimit ab.
     vi.advanceTimersByTime(5 * 60_000);
     expect(room.game?.phase.type).toBe('gameEnd');
-    expect(room.backToLobby(room.hostId).ok).toBe(true);
+    expect(room.backToLobby(room.effectiveHostId()).ok).toBe(true);
     expect(room.members.map((m) => m.id)).toEqual(ids.slice(0, 2));
     expect(games.get(ids[0]!)).toBeNull();
   });

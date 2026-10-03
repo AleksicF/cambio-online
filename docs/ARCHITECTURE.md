@@ -13,11 +13,11 @@ Browser (React-Client)  ⇄  Socket.IO  ⇄  Node-Server (autoritativ)
 
 ## Pakete
 
-| Paket             | Inhalt                                                                  | Tooling                    |
-| ----------------- | ----------------------------------------------------------------------- | -------------------------- |
-| `packages/shared` | Karten, Regeln, Spielzustand, Protokoll-Typen                           | TypeScript, Vitest         |
-| `packages/server` | Express + Socket.IO, Räume, Timer; liefert in Produktion den Client aus | tsx (dev), tsup (build)    |
-| `packages/client` | UI, Animationen                                                         | React, Vite, Framer Motion |
+| Paket             | Inhalt                                                                  | Tooling                         |
+| ----------------- | ----------------------------------------------------------------------- | ------------------------------- |
+| `packages/shared` | Karten, Regeln, Spielzustand, Protokoll-Typen                           | TypeScript, Vitest              |
+| `packages/server` | Express + Socket.IO, Räume, Timer; liefert in Produktion den Client aus | tsx (dev), tsup (build)         |
+| `packages/client` | UI, Animationen                                                         | React, Vite, Web Animations API |
 
 `@cambio/shared` wird nicht separat gebaut, sondern als TypeScript-Quelle eingebunden (Vite bzw. tsup bündeln es mit).
 

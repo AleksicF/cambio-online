@@ -101,7 +101,6 @@ export class Room {
     if (!member || member.connected === connected) return;
     member.connected = connected;
     this.emptySince = this.members.some((m) => m.connected) ? null : Date.now();
-    if (!connected) this.ensureHost();
     this.broadcastRoom();
     if (this.game) {
       // Abwesende Spieler bekommen ein kurzes Zeitlimit.
@@ -129,7 +128,7 @@ export class Room {
   }
 
   kick(by: string, playerId: string): Result {
-    if (by !== this.hostId) return { ok: false, error: 'notHost' };
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
     if (this.game) return { ok: false, error: 'notInLobby' };
     const member = this.member(playerId);
     if (!member || playerId === by) return { ok: false, error: 'notInRoom' };
@@ -140,7 +139,7 @@ export class Room {
   }
 
   updateSettings(by: string, input: unknown): Result {
-    if (by !== this.hostId) return { ok: false, error: 'notHost' };
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
     if (this.game) return { ok: false, error: 'notInLobby' };
     const merged = mergeSettings(this.settings, input);
     // Max. Spieler nie unter die aktuelle Anzahl senken.
@@ -154,7 +153,7 @@ export class Room {
   // Spielablauf
 
   start(by: string): Result {
-    if (by !== this.hostId) return { ok: false, error: 'notHost' };
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
     if (this.game) return { ok: false, error: 'notInLobby' };
     if (this.members.length < MIN_PLAYERS) return { ok: false, error: 'notEnoughPlayers' };
     const { state, events } = createGame(
@@ -175,13 +174,13 @@ export class Room {
   }
 
   nextPartie(by: string): Result {
-    if (by !== this.hostId) return { ok: false, error: 'notHost' };
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
     if (!this.game) return { ok: false, error: 'notInLobby' };
     return this.commit(applySystemAction(this.game, { type: 'startNextPartie' }, this.random));
   }
 
   backToLobby(by: string): Result {
-    if (by !== this.hostId) return { ok: false, error: 'notHost' };
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
     if (this.game?.phase.type !== 'gameEnd') return { ok: false, error: 'gameInProgress' };
     this.clearTimer();
     this.game = null;
@@ -204,7 +203,7 @@ export class Room {
   view(): RoomView {
     return {
       code: this.code,
-      hostId: this.hostId,
+      hostId: this.effectiveHostId(),
       players: this.members
         .filter((m) => !m.left)
         .map(({ id, name, connected }) => ({ id, name, connected })),
@@ -327,13 +326,27 @@ export class Room {
     for (const m of this.members) if (m.connected) this.transport.sendRoom(m.id, view);
   }
 
-  /** Überträgt die Host-Rolle, falls der Host weg ist. */
+  /**
+   * Ist der Host nur kurz getrennt (z. B. Seite neu geladen), übernimmt
+   * vorübergehend der erste verbundene Spieler – die Rolle bleibt beim Host.
+   */
+  effectiveHostId(): string {
+    const host = this.member(this.hostId);
+    if (host?.connected) return host.id;
+    return this.members.find((m) => m.connected && !m.left)?.id ?? this.hostId;
+  }
+
+  isHost(playerId: string): boolean {
+    return playerId === this.effectiveHostId();
+  }
+
+  /** Überträgt die Host-Rolle dauerhaft, wenn der Host den Raum verlassen hat. */
   private ensureHost() {
     const host = this.member(this.hostId);
-    if (host?.connected && !host.left) return;
-    const next = this.members.find((m) => m.connected && !m.left);
-    if (next) this.hostId = next.id;
-    else if (!host || host.left) this.hostId = this.members.find((m) => !m.left)?.id ?? '';
+    if (host && !host.left) return;
+    const next =
+      this.members.find((m) => m.connected && !m.left) ?? this.members.find((m) => !m.left);
+    this.hostId = next?.id ?? '';
   }
 
   private uniqueName(name: string): string {
