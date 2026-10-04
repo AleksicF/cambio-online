@@ -149,3 +149,11 @@ Der Host legt vor Spielbeginn in einem Einstellungsfenster fest:
 | Max. Spieler                        | 2–6                                      | 6            |
 
 Läuft das Zeitlimit ab, wird automatisch gehandelt: Eine gezogene Karte wird abgelegt (ohne Fähigkeit), eine offene Fähigkeit verfällt. Hat der Spieler noch nicht gezogen, zieht er automatisch und legt die Karte ab.
+
+## 11. Bots
+
+Der Host kann in der Lobby Bots hinzufügen (auch zum Allein-Spielen). Bots zählen als Spieler (2–6) und spielen nach denselben Regeln.
+
+- **Fairness:** Ein Bot sieht nur, was ein menschlicher Spieler an seiner Stelle sähe, und muss sich Karten merken.
+- **Schwierigkeit** pro Bot: Einfach, Mittel, Schwer. Sie bestimmt, wie zuverlässig sich der Bot Karten merkt, wie oft er eigene und fremde Karten abwirft, wie schnell er reagiert und wie gut er Fähigkeiten nutzt. Die genauen Werte zeigt die Lobby unter „Was bedeuten die Stufen?“.
+- Bots handeln mit Bedenk- und Reaktionszeit, nicht sofort.

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type {
   ActionError,
   AckResponse,
+  BotDifficulty,
   GameSettings,
   GameUpdate,
   PlayerAction,
@@ -164,6 +165,10 @@ export const api = {
   updateSettings: (settings: Partial<GameSettings>) =>
     request(() => withTimeout().emitWithAck('updateSettings', settings)),
   kick: (playerId: string) => request(() => withTimeout().emitWithAck('kickPlayer', { playerId })),
+  addBot: (difficulty: BotDifficulty) =>
+    request(() => withTimeout().emitWithAck('addBot', { difficulty })),
+  setBotDifficulty: (playerId: string, difficulty: BotDifficulty) =>
+    request(() => withTimeout().emitWithAck('setBotDifficulty', { playerId, difficulty })),
   startGame: () => request(() => withTimeout().emitWithAck('startGame')),
   act: (action: PlayerAction) => request(() => withTimeout().emitWithAck('gameAction', action)),
   nextPartie: () => request(() => withTimeout().emitWithAck('nextPartie')),

@@ -924,3 +924,51 @@ div.card--dragging {
 .help__table td:first-child {
   white-space: nowrap;
 }
+
+/* ---- Bots ---------------------------------------------------------------- */
+
+.player-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.player-list__actions select {
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.bots {
+  margin-top: 0.75rem;
+}
+
+.bots .row {
+  align-items: center;
+}
+
+.bots__info {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.bots__info summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.bots__info table {
+  margin: 0.5rem 0;
+}
+
+.bots__info th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding-bottom: 0.25rem;
+}
+
+.bots__info td:first-child {
+  white-space: normal;
+}

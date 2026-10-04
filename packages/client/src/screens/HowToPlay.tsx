@@ -199,6 +199,10 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
             </li>
             <li>Der Balken unter der Tischmitte zeigt die verbleibende Zeit.</li>
             <li>Gerade neu hingelegte Karten sind kurz farbig umrandet.</li>
+            <li>
+              <strong>Bots:</strong> Allein spielen oder Runden auffüllen? Der Host fügt in der
+              Lobby Bots in drei Stufen hinzu.
+            </li>
             <li>Verbindung weg oder Seite neu geladen? Einfach neu laden – du bist wieder drin.</li>
           </ul>
           <p className="muted">

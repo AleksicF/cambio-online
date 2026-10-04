@@ -38,7 +38,7 @@ export class RoomManager {
   /** Entfernt leere Räume und solche, in denen schon länger niemand verbunden ist. */
   sweep(now = Date.now()) {
     for (const [code, room] of this.rooms) {
-      const empty = room.members.length === 0;
+      const empty = !room.hasHumans();
       const abandoned = room.emptySince !== null && now - room.emptySince > EMPTY_ROOM_TTL_MS;
       if (empty || abandoned) {
         room.dispose();

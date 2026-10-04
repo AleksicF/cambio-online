@@ -11,6 +11,10 @@ Browser (React-Client)  ⇄  Socket.IO  ⇄  Node-Server (autoritativ)
 - **Gemeinsame Spiellogik:** `@cambio/shared` enthält reine Funktionen (Zustand + Aktion → neuer Zustand), Typen und das Netzwerkprotokoll. Der Server nutzt sie zur Validierung, der Client für Typen und Anzeige.
 - **Zustand im Arbeitsspeicher:** Räume und Spiele werden vorerst nur im RAM gehalten (ein Server-Prozess). Eine Datenbank kommt erst mit Accounts/Statistiken dazu.
 
+## Bots
+
+Bots laufen auf dem Server. Jeder Bot bekommt dieselben gefilterten Updates wie ein menschlicher Spieler (`getPlayerView` + `eventsFor`) und entscheidet in `@cambio/shared/bot` (`BotBrain`). `BotPlayer` im Server plant seine Aktionen mit Bedenk- und Reaktionszeit über Timer und schickt sie über denselben Weg wie ein Mensch (`Room.act`). Tests in `bot/brain.test.ts` spielen komplette Partien nur mit Bots durch.
+
 ## Pakete
 
 | Paket             | Inhalt                                                                  | Tooling                         |

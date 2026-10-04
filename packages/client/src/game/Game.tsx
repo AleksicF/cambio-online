@@ -147,6 +147,7 @@ export function Game({ update, room, deadline }: GameProps) {
               player={p}
               view={view}
               connected={room.players.find((r) => r.id === p.id)?.connected ?? false}
+              isBot={!!room.players.find((r) => r.id === p.id)?.bot}
             >
               {renderHand(p, true)}
             </PlayerPanel>
@@ -281,11 +282,13 @@ function PlayerPanel({
   player,
   view,
   connected,
+  isBot,
   children,
 }: {
   player: PlayerViewPlayer;
   view: PlayerView;
   connected: boolean;
+  isBot?: boolean;
   children: React.ReactNode;
 }) {
   const active = view.currentPlayerId === player.id && view.phase.type !== 'initialPeek';
@@ -298,6 +301,7 @@ function PlayerPanel({
       <div className="player__name">
         <span>{isMe ? `${player.name} (du)` : player.name}</span>
         {view.cambioCallerId === player.id && <span className="tag tag--accent">Cambio</span>}
+        {isBot && <span className="tag tag--muted">Bot</span>}
         {!connected && <span className="tag tag--muted">getrennt</span>}
         {view.settings.mode === 'points' && <span className="muted">{player.totalScore} P.</span>}
       </div>

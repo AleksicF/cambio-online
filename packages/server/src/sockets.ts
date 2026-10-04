@@ -1,10 +1,11 @@
 import type { Server, Socket } from 'socket.io';
-import type {
-  Ack,
-  AckResponse,
-  ClientToServerEvents,
-  ServerToClientEvents,
-  Session,
+import {
+  isBotDifficulty,
+  type Ack,
+  type AckResponse,
+  type ClientToServerEvents,
+  type ServerToClientEvents,
+  type Session,
 } from '@cambio/shared';
 import type { Room, RoomTransport } from './rooms/Room';
 import { RoomManager } from './rooms/RoomManager';
@@ -148,6 +149,25 @@ export function attachGameHandlers(io: GameServer, serverVersion: string) {
         return typeof target === 'string'
           ? room.kick(id, target)
           : { ok: false, error: 'invalidPayload' };
+      }),
+    );
+
+    socket.on('addBot', (payload, ack) =>
+      withRoom(socket, ack, (room, id) => {
+        const difficulty = parseObject(payload)?.difficulty;
+        if (!isBotDifficulty(difficulty)) return { ok: false, error: 'invalidPayload' };
+        const result = room.addBot(id, difficulty);
+        return result.ok ? { ok: true } : result;
+      }),
+    );
+
+    socket.on('setBotDifficulty', (payload, ack) =>
+      withRoom(socket, ack, (room, id) => {
+        const data = parseObject(payload);
+        if (typeof data?.playerId !== 'string' || !isBotDifficulty(data.difficulty)) {
+          return { ok: false, error: 'invalidPayload' };
+        }
+        return room.setBotDifficulty(id, data.playerId, data.difficulty);
       }),
     );
 

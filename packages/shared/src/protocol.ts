@@ -1,6 +1,7 @@
 import type { GameError, GameEvent, PlayerAction } from './game/types';
 import type { PlayerView } from './game/view';
 import type { GameSettings } from './settings';
+import type { BotDifficulty } from './bot/profiles';
 
 /** Zugangsdaten, mit denen ein Client nach einem Verbindungsabbruch zurückkehrt. */
 export interface Session {
@@ -13,6 +14,8 @@ export interface RoomPlayer {
   id: string;
   name: string;
   connected: boolean;
+  /** Schwierigkeit, falls der Spieler ein Bot ist. */
+  bot: BotDifficulty | null;
 }
 
 export interface RoomView {
@@ -68,6 +71,8 @@ export interface ClientToServerEvents {
   leaveRoom: (ack: Ack) => void;
   updateSettings: (settings: Partial<GameSettings>, ack: Ack) => void;
   kickPlayer: (payload: { playerId: string }, ack: Ack) => void;
+  addBot: (payload: { difficulty: BotDifficulty }, ack: Ack) => void;
+  setBotDifficulty: (payload: { playerId: string; difficulty: BotDifficulty }, ack: Ack) => void;
   startGame: (ack: Ack) => void;
   gameAction: (action: PlayerAction, ack: Ack) => void;
   nextPartie: (ack: Ack) => void;

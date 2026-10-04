@@ -32,11 +32,14 @@ Cambio Online/
 │  │  ├─ cards.ts            Kartenwerte, Deck, Mischen
 │  │  ├─ settings.ts         Lobby-Einstellungen: Standardwerte und Grenzen
 │  │  ├─ protocol.ts         Nachrichten zwischen Browser und Server
-│  │  └─ game/
+│  │  ├─ game/
 │  │     ├─ engine.ts        Herzstück: alle Spielzüge und Regeln
 │  │     ├─ scoring.ts       Wertung (Einzelspiel, Punktemodus)
 │  │     ├─ view.ts          Was ein Spieler sehen darf
 │  │     └─ types.ts         Datentypen (Zustand, Aktionen, Ereignisse)
+│  │  └─ bot/
+│  │     ├─ profiles.ts      Schwierigkeitsstufen: Gedächtnis, Abwerfen, Reaktionszeiten
+│  │     └─ brain.ts         Wie ein Bot sich Karten merkt und entscheidet
 │  │
 │  ├─ server/src/            ── Server ──
 │  │  ├─ index.ts            Startpunkt (Port)
@@ -45,7 +48,8 @@ Cambio Online/
 │  │  ├─ validation.ts       Prüft Eingaben der Spieler auf Gültigkeit
 │  │  └─ rooms/
 │  │     ├─ Room.ts          Ein Raum: Spieler, Host, Timer, laufendes Spiel
-│  │     └─ RoomManager.ts   Alle Räume, Raumcodes, Aufräumen leerer Räume
+│  │     ├─ RoomManager.ts   Alle Räume, Raumcodes, Aufräumen leerer Räume
+│  │     └─ BotPlayer.ts     Lässt einen Bot im Raum mitspielen (Timer für Bedenk-/Reaktionszeit)
 │  │
 │  └─ client/                ── Webseite ──
 │     ├─ index.html          HTML-Grundgerüst, Seitentitel
@@ -59,6 +63,7 @@ Cambio Online/
 │        │  ├─ Home.tsx      Startseite (Name, Raum erstellen/beitreten)
 │        │  ├─ Lobby.tsx     Lobby (Spielerliste, Einstellungen, Start)
 │        │  ├─ HowToPlay.tsx Spielanleitung (Pop-up auf Startseite und in der Lobby)
+│        │  ├─ BotControls.tsx Bots hinzufügen und Erklärung der Stufen (Lobby)
 │        │  └─ PersonalSettings.tsx „Deine Bedienung“ in der Lobby (Abwerfen, Hilfe)
 │        ├─ game/
 │        │  ├─ Game.tsx      Spieltisch: Layout, Buttons, Hinweistexte
@@ -98,34 +103,37 @@ Nicht von Hand ändern: `package-lock.json` (wird von npm verwaltet),
 
 ## Wo ändere ich was?
 
-| Ich will …                                       | Datei                                                                                                                 |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Farben, Schriftgrößen, Abstände ändern           | `packages/client/src/styles.css` – Farben ganz oben unter `:root`                                                     |
-| Kartengröße ändern                               | `styles.css` → `--card-w` (eigene Karten) und `--card-w-small` (Gegner)                                               |
-| Eigene Kartenbilder einsetzen                    | siehe `docs/CARDS.md`                                                                                                 |
-| Kartenbeschriftung ändern (z. B. „B“ für Bube)   | `packages/client/src/cards/cardAssets.ts` → `RANK_LABEL`                                                              |
-| Texte auf der Startseite / Lobby ändern          | `screens/Home.tsx` bzw. `screens/Lobby.tsx`                                                                           |
-| Hinweistexte am Spieltisch ändern                | `game/Game.tsx` → Funktion `Prompt`; Fähigkeiten in `game/interaction.ts`                                             |
-| Protokoll-Texte ändern                           | `game/useEventFeed.ts`                                                                                                |
-| Fehlermeldungen ändern                           | `net/errors.ts`                                                                                                       |
-| Dauer der Landungs-Markierung                    | `game/useFlights.tsx` → `LANDED_MS` (Millisekunden)                                                                   |
-| Steuerung standardmäßig „Alles klicken“          | `packages/client/src/prefs.ts` → bei `snapMode` den letzten Wert `'drag'` auf `'click'`                               |
-| Anordnung der Karten (2 Reihen, neue rechts)     | `game/Game.tsx` → `slotPosition`                                                                                      |
-| Animationstempo ändern                           | `game/useFlights.tsx` → `DURATION` (Sekunden pro Flug), `STEP` (Abstand zwischen Flügen), `DEAL_STEP` (Austeilen)     |
-| Standardwerte der Lobby-Einstellungen            | `packages/shared/src/settings.ts` → `DEFAULT_SETTINGS`                                                                |
-| Erlaubte Bereiche der Einstellungen              | `settings.ts` → `SETTINGS_LIMITS`                                                                                     |
-| Kartenwerte ändern (z. B. schwarzer König)       | `packages/shared/src/cards.ts` → `cardValue`                                                                          |
-| Welche Karte welche Fähigkeit hat                | `packages/shared/src/game/engine.ts` → `abilityOf`                                                                    |
-| Spielregeln ändern                               | zuerst `docs/RULES.md`, dann `engine.ts` (und Tests in `engine.test.ts`)                                              |
-| Wertung / Strafpunkte                            | `packages/shared/src/game/scoring.ts`                                                                                 |
-| Text der Spielanleitung                          | `packages/client/src/screens/HowToPlay.tsx` (Kartenwerte kommen automatisch aus `cards.ts`)                           |
-| Trefferzone beim Ziehen auf die Ablage           | `game/useSnapDrag.tsx` → `DROP_MARGIN` (Pixel um die Ablage herum)                                                    |
-| Texte der Hilfe am Spieltisch                    | `game/HelpPanel.tsx`; Fähigkeitsnamen in `game/interaction.ts` → `ABILITY_LABEL`                                      |
-| Hilfe standardmäßig aus statt an                 | `packages/client/src/prefs.ts` → bei `help` den letzten Wert `'on'` auf `'off'`                                       |
-| Seitentitel im Browser-Tab                       | `packages/client/index.html`                                                                                          |
-| Impressum/Datenschutz ausfüllen und freischalten | `packages/client/src/legal/legalInfo.ts` (Angaben, `published: true`)                                                 |
-| Texte von Impressum/Datenschutz ändern           | `packages/client/src/legal/LegalPages.tsx`                                                                            |
-| Seite für Suchmaschinen freigeben                | `packages/server/src/app.ts` → `NO_INDEX = false` **und** `robots`-Meta-Tag in `packages/client/index.html` entfernen |
+| Ich will …                                               | Datei                                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Farben, Schriftgrößen, Abstände ändern                   | `packages/client/src/styles.css` – Farben ganz oben unter `:root`                                                     |
+| Kartengröße ändern                                       | `styles.css` → `--card-w` (eigene Karten) und `--card-w-small` (Gegner)                                               |
+| Eigene Kartenbilder einsetzen                            | siehe `docs/CARDS.md`                                                                                                 |
+| Kartenbeschriftung ändern (z. B. „B“ für Bube)           | `packages/client/src/cards/cardAssets.ts` → `RANK_LABEL`                                                              |
+| Texte auf der Startseite / Lobby ändern                  | `screens/Home.tsx` bzw. `screens/Lobby.tsx`                                                                           |
+| Hinweistexte am Spieltisch ändern                        | `game/Game.tsx` → Funktion `Prompt`; Fähigkeiten in `game/interaction.ts`                                             |
+| Protokoll-Texte ändern                                   | `game/useEventFeed.ts`                                                                                                |
+| Fehlermeldungen ändern                                   | `net/errors.ts`                                                                                                       |
+| Dauer der Landungs-Markierung                            | `game/useFlights.tsx` → `LANDED_MS` (Millisekunden)                                                                   |
+| Steuerung standardmäßig „Alles klicken“                  | `packages/client/src/prefs.ts` → bei `snapMode` den letzten Wert `'drag'` auf `'click'`                               |
+| Anordnung der Karten (2 Reihen, neue rechts)             | `game/Game.tsx` → `slotPosition`                                                                                      |
+| Animationstempo ändern                                   | `game/useFlights.tsx` → `DURATION` (Sekunden pro Flug), `STEP` (Abstand zwischen Flügen), `DEAL_STEP` (Austeilen)     |
+| Standardwerte der Lobby-Einstellungen                    | `packages/shared/src/settings.ts` → `DEFAULT_SETTINGS`                                                                |
+| Erlaubte Bereiche der Einstellungen                      | `settings.ts` → `SETTINGS_LIMITS`                                                                                     |
+| Kartenwerte ändern (z. B. schwarzer König)               | `packages/shared/src/cards.ts` → `cardValue`                                                                          |
+| Welche Karte welche Fähigkeit hat                        | `packages/shared/src/game/engine.ts` → `abilityOf`                                                                    |
+| Spielregeln ändern                                       | zuerst `docs/RULES.md`, dann `engine.ts` (und Tests in `engine.test.ts`)                                              |
+| Bot-Schwierigkeit anpassen (Gedächtnis, Abwerfen, Tempo) | `packages/shared/src/bot/profiles.ts` → `BOT_PROFILES`                                                                |
+| Bot-Strategie (wann tauschen, wann Cambio)               | `packages/shared/src/bot/brain.ts`                                                                                    |
+| Namen der Bots                                           | `packages/server/src/rooms/Room.ts` → `BOT_NAMES`                                                                     |
+| Wertung / Strafpunkte                                    | `packages/shared/src/game/scoring.ts`                                                                                 |
+| Text der Spielanleitung                                  | `packages/client/src/screens/HowToPlay.tsx` (Kartenwerte kommen automatisch aus `cards.ts`)                           |
+| Trefferzone beim Ziehen auf die Ablage                   | `game/useSnapDrag.tsx` → `DROP_MARGIN` (Pixel um die Ablage herum)                                                    |
+| Texte der Hilfe am Spieltisch                            | `game/HelpPanel.tsx`; Fähigkeitsnamen in `game/interaction.ts` → `ABILITY_LABEL`                                      |
+| Hilfe standardmäßig aus statt an                         | `packages/client/src/prefs.ts` → bei `help` den letzten Wert `'on'` auf `'off'`                                       |
+| Seitentitel im Browser-Tab                               | `packages/client/index.html`                                                                                          |
+| Impressum/Datenschutz ausfüllen und freischalten         | `packages/client/src/legal/legalInfo.ts` (Angaben, `published: true`)                                                 |
+| Texte von Impressum/Datenschutz ändern                   | `packages/client/src/legal/LegalPages.tsx`                                                                            |
+| Seite für Suchmaschinen freigeben                        | `packages/server/src/app.ts` → `NO_INDEX = false` **und** `robots`-Meta-Tag in `packages/client/index.html` entfernen |
 
 **Achtung bei Regeländerungen:** Die Tests prüfen die aktuellen Regeln. Wenn du
 zum Beispiel einen Kartenwert änderst, schlägt `npm test` fehl, bis der

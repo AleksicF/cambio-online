@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  BOT_DIFFICULTY_LABEL,
   MIN_PLAYERS,
   SETTINGS_LIMITS,
   type GameSettings,
@@ -10,6 +11,7 @@ import { api, type Response } from '../net/store';
 import { errorText } from '../net/errors';
 import { HowToPlay } from './HowToPlay';
 import { PersonalSettings } from './PersonalSettings';
+import { BotControls, BotDifficultySelect } from './BotControls';
 
 export function Lobby({ room, session }: { room: RoomView; session: Session }) {
   const isHost = room.hostId === session.playerId;
@@ -62,20 +64,39 @@ export function Lobby({ room, session }: { room: RoomView; session: Session }) {
                 {p.name}
                 {p.id === session.playerId && <span className="muted"> (du)</span>}
                 {p.id === room.hostId && <span className="tag">Host</span>}
+                {p.bot && <span className="tag">Bot</span>}
+                {p.bot && !isHost && (
+                  <span className="muted"> · {BOT_DIFFICULTY_LABEL[p.bot]}</span>
+                )}
                 {!p.connected && <span className="tag tag--muted">getrennt</span>}
               </span>
               {isHost && p.id !== session.playerId && (
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() => void run(() => api.kick(p.id))}
-                >
-                  Entfernen
-                </button>
+                <span className="player-list__actions">
+                  {p.bot && (
+                    <BotDifficultySelect
+                      value={p.bot}
+                      label={`Schwierigkeit von ${p.name}`}
+                      onChange={(d) => void run(() => api.setBotDifficulty(p.id, d))}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => void run(() => api.kick(p.id))}
+                  >
+                    Entfernen
+                  </button>
+                </span>
               )}
             </li>
           ))}
         </ul>
+        {isHost && (
+          <BotControls
+            canAdd={room.players.length < room.settings.maxPlayers}
+            onAdd={(d) => void run(() => api.addBot(d))}
+          />
+        )}
       </section>
 
       <section className="section">

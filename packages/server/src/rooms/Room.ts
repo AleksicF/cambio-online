@@ -13,6 +13,7 @@ import {
   type ActionError,
   type ActionResult,
   type AudiencedEvent,
+  type BotDifficulty,
   type GameSettings,
   type GameState,
   type GameUpdate,
@@ -20,6 +21,7 @@ import {
   type RoomView,
   type SystemAction,
 } from '@cambio/shared';
+import { BotPlayer, type BotHost } from './BotPlayer';
 
 /** Wie der Raum seine Mitglieder erreicht – entkoppelt von Socket.IO, damit testbar. */
 export interface RoomTransport {
@@ -35,7 +37,12 @@ export interface Member {
   connected: boolean;
   /** Hat das laufende Spiel verlassen; wird beim Zurück-zur-Lobby entfernt. */
   left: boolean;
+  /** Schwierigkeit, falls Bot. Bots sind immer verbunden und nie Host. */
+  bot: BotDifficulty | null;
 }
+
+/** Namen für Bots, in dieser Reihenfolge vergeben. */
+export const BOT_NAMES = ['Ada', 'Bruno', 'Clara', 'Dario', 'Elif', 'Finn'];
 
 /** Zeitlimit für abwesende Spieler, damit das Spiel nicht hängen bleibt. */
 export const ABSENT_PLAYER_TIMEOUT_MS = 5_000;
@@ -50,7 +57,7 @@ export function normalizeName(name: unknown): string | null {
   return trimmed.length > 0 && trimmed.length <= MAX_NAME_LENGTH ? trimmed : null;
 }
 
-export class Room {
+export class Room implements BotHost {
   readonly members: Member[] = [];
   hostId = '';
   settings: GameSettings = { ...DEFAULT_SETTINGS };
@@ -62,6 +69,7 @@ export class Room {
   private deadline: number | null = null;
   private phaseKey = '';
   private phaseDeadline: number | null = null;
+  private readonly bots = new Map<string, BotPlayer>();
 
   constructor(
     readonly code: string,
@@ -84,6 +92,7 @@ export class Room {
       token: randomUUID(),
       connected: true,
       left: false,
+      bot: null,
     };
     this.members.push(member);
     if (!this.hostId) this.hostId = member.id;
@@ -93,14 +102,47 @@ export class Room {
   }
 
   findByToken(playerId: string, token: string): Member | undefined {
-    return this.members.find((m) => m.id === playerId && m.token === token && !m.left);
+    return this.members.find((m) => m.id === playerId && m.token === token && !m.left && !m.bot);
+  }
+
+  addBot(by: string, difficulty: BotDifficulty): Result<{ member: Member }> {
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
+    if (this.game) return { ok: false, error: 'notInLobby' };
+    if (this.members.length >= this.settings.maxPlayers) return { ok: false, error: 'roomFull' };
+    const taken = new Set(this.members.map((m) => m.name));
+    const name = BOT_NAMES.find((n) => !taken.has(n)) ?? 'Bot';
+    const member: Member = {
+      id: randomUUID(),
+      name: this.uniqueName(name),
+      token: '',
+      connected: true,
+      left: false,
+      bot: difficulty,
+    };
+    this.members.push(member);
+    this.bots.set(member.id, new BotPlayer(member.id, difficulty, this, this.random));
+    this.broadcastRoom();
+    return { ok: true, member };
+  }
+
+  setBotDifficulty(by: string, playerId: string, difficulty: BotDifficulty): Result {
+    if (!this.isHost(by)) return { ok: false, error: 'notHost' };
+    if (this.game) return { ok: false, error: 'notInLobby' };
+    const member = this.member(playerId);
+    const bot = this.bots.get(playerId);
+    if (!member || !bot) return { ok: false, error: 'notInRoom' };
+    member.bot = difficulty;
+    bot.difficulty = difficulty;
+    bot.reset();
+    this.broadcastRoom();
+    return { ok: true };
   }
 
   setConnected(playerId: string, connected: boolean) {
     const member = this.member(playerId);
     if (!member || member.connected === connected) return;
     member.connected = connected;
-    this.emptySince = this.members.some((m) => m.connected) ? null : Date.now();
+    this.updateEmptySince();
     this.broadcastRoom();
     if (this.game) {
       // Abwesende Spieler bekommen ein kurzes Zeitlimit.
@@ -122,7 +164,7 @@ export class Room {
       this.members.splice(this.members.indexOf(member), 1);
       this.ensureHost();
     }
-    this.emptySince = this.members.some((m) => m.connected) ? null : Date.now();
+    this.updateEmptySince();
     this.broadcastRoom();
     return { ok: true };
   }
@@ -133,7 +175,13 @@ export class Room {
     const member = this.member(playerId);
     if (!member || playerId === by) return { ok: false, error: 'notInRoom' };
     this.members.splice(this.members.indexOf(member), 1);
-    this.transport.sendKicked(playerId);
+    const bot = this.bots.get(playerId);
+    if (bot) {
+      bot.dispose();
+      this.bots.delete(playerId);
+    } else {
+      this.transport.sendKicked(playerId);
+    }
     this.broadcastRoom();
     return { ok: true };
   }
@@ -163,6 +211,7 @@ export class Room {
     );
     this.game = state;
     this.phaseKey = '';
+    for (const bot of this.bots.values()) bot.reset();
     this.broadcastRoom();
     this.afterChange(events);
     return { ok: true };
@@ -183,6 +232,7 @@ export class Room {
     if (!this.isHost(by)) return { ok: false, error: 'notHost' };
     if (this.game?.phase.type !== 'gameEnd') return { ok: false, error: 'gameInProgress' };
     this.clearTimer();
+    for (const bot of this.bots.values()) bot.reset();
     this.game = null;
     for (const m of this.members.filter((m) => m.left)) {
       this.members.splice(this.members.indexOf(m), 1);
@@ -195,6 +245,18 @@ export class Room {
 
   dispose() {
     this.clearTimer();
+    for (const bot of this.bots.values()) bot.dispose();
+  }
+
+  // -------------------------------------------------------------------------
+  // Schnittstelle für Bots
+
+  viewFor(playerId: string) {
+    return this.game ? getPlayerView(this.game, playerId) : null;
+  }
+
+  botAct(playerId: string, action: PlayerAction): Result {
+    return this.act(playerId, action);
   }
 
   // -------------------------------------------------------------------------
@@ -206,7 +268,7 @@ export class Room {
       hostId: this.effectiveHostId(),
       players: this.members
         .filter((m) => !m.left)
-        .map(({ id, name, connected }) => ({ id, name, connected })),
+        .map(({ id, name, connected, bot }) => ({ id, name, connected, bot })),
       settings: this.settings,
       status: this.game ? 'playing' : 'lobby',
     };
@@ -241,10 +303,16 @@ export class Room {
   private afterChange(events: AudiencedEvent[]) {
     this.schedule();
     for (const m of this.members) this.sendGameTo(m, events);
+    // Bots bekommen dasselbe Update wie ein Mensch; sie handeln verzögert über Timer.
+    if (this.game) {
+      for (const m of this.members) {
+        if (m.bot) this.bots.get(m.id)?.update(this.gameUpdate(m, events));
+      }
+    }
   }
 
   private sendGameTo(member: Member, events: AudiencedEvent[]) {
-    if (!this.game || !member.connected) return;
+    if (!this.game || !member.connected || member.bot) return;
     this.transport.sendGame(member.id, this.gameUpdate(member, events));
   }
 
@@ -323,7 +391,7 @@ export class Room {
 
   private broadcastRoom() {
     const view = this.view();
-    for (const m of this.members) if (m.connected) this.transport.sendRoom(m.id, view);
+    for (const m of this.members) if (m.connected && !m.bot) this.transport.sendRoom(m.id, view);
   }
 
   /**
@@ -333,7 +401,7 @@ export class Room {
   effectiveHostId(): string {
     const host = this.member(this.hostId);
     if (host?.connected) return host.id;
-    return this.members.find((m) => m.connected && !m.left)?.id ?? this.hostId;
+    return this.members.find((m) => m.connected && !m.left && !m.bot)?.id ?? this.hostId;
   }
 
   isHost(playerId: string): boolean {
@@ -344,9 +412,19 @@ export class Room {
   private ensureHost() {
     const host = this.member(this.hostId);
     if (host && !host.left) return;
-    const next =
-      this.members.find((m) => m.connected && !m.left) ?? this.members.find((m) => !m.left);
+    const humans = this.members.filter((m) => !m.left && !m.bot);
+    const next = humans.find((m) => m.connected) ?? humans[0];
     this.hostId = next?.id ?? '';
+  }
+
+  /** Nur Menschen zählen: Ein Raum nur mit Bots gilt als leer. */
+  hasHumans(): boolean {
+    return this.members.some((m) => !m.bot && !m.left);
+  }
+
+  private updateEmptySince() {
+    const anyoneHere = this.members.some((m) => m.connected && !m.bot);
+    this.emptySince = anyoneHere ? null : (this.emptySince ?? Date.now());
   }
 
   private uniqueName(name: string): string {
