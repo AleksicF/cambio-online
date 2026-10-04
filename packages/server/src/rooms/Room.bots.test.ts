@@ -90,6 +90,32 @@ describe('Einzelspieler gegen Bots', () => {
     },
   );
 
+  it('bei „bis zur nächsten Karte“ lässt der Bot Zeit zum Abwerfen', () => {
+    const { room, hostId } = setup();
+    room.addBot(hostId, 'hard');
+    room.updateSettings(hostId, { turnTimeLimit: null, snapWindowMode: 'untilNextCard' });
+    room.start(hostId);
+    vi.advanceTimersByTime(room.settings.peekDuration * 1000);
+    const humanToMove = () =>
+      room.game!.players[room.game!.currentPlayerIndex]!.id === hostId &&
+      room.game!.phase.type === 'turn';
+    for (let i = 0; i < 100 && !humanToMove(); i++) vi.advanceTimersByTime(100);
+    expect(humanToMove()).toBe(true);
+
+    room.act(hostId, { type: 'drawFromDeck' });
+    room.act(hostId, { type: 'discardDrawn' });
+    if (room.game!.phase.type === 'ability') room.act(hostId, { type: 'skipAbility' });
+    expect(room.game!.snapOpen).toBe(true);
+
+    // Der Bot ist jetzt dran; seine neue Karte darf frühestens nach Abwurf-Zeit + Animation kommen.
+    let elapsed = 0;
+    while (!humanToMove() && elapsed < 20_000) {
+      vi.advanceTimersByTime(100);
+      elapsed += 100;
+    }
+    expect(elapsed).toBeGreaterThanOrEqual(room.settings.snapWindow * 1000 + 800);
+  });
+
   it('Bots handeln mit Bedenkzeit, nicht sofort', () => {
     const { room, hostId } = setup();
     const bot = room.addBot(hostId, 'hard');

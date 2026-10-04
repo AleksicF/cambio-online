@@ -137,7 +137,11 @@ export function useFlights(update: GameUpdate | null) {
     previousRects.current = measureAnchors();
   });
 
-  const hidden = useMemo(() => new Set(flights.map((f) => f.to)), [flights]);
+  // Die Ablage bleibt sichtbar: Die neue Karte soll sofort erkennbar sein (Abwerfen!).
+  const hidden = useMemo(
+    () => new Set(flights.map((f) => f.to).filter((to) => to !== DISCARD)),
+    [flights],
+  );
 
   const layer = (
     <div className="flight-layer" aria-hidden>

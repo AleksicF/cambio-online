@@ -230,7 +230,7 @@ function SettingsForm({
       </label>
       {number(
         'snapWindow',
-        settings.snapWindowMode === 'timed' ? 'Abwurf-Fenster' : 'Abwurf-Fenster am Partie-Ende',
+        settings.snapWindowMode === 'timed' ? 'Abwurf-Fenster' : 'Mindestzeit zum Abwerfen',
         's',
       )}
       <label className="setting">

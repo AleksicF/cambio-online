@@ -15,6 +15,19 @@ export interface BotHost {
   botAct(playerId: string, action: PlayerAction): { ok: true } | { ok: false; error: ActionError };
 }
 
+/**
+ * Zuschlag auf die Abwurf-Zeit: So lange dauern die Kartenanimationen ungefähr,
+ * in denen ein Mensch die neue Karte noch nicht richtig erfassen kann.
+ */
+export const ANIMATION_ALLOWANCE_MS = 800;
+
+/** Aktionen, die eine neue Karte auf die Ablage legen (und damit Abwerfen beenden). */
+const PUTS_CARD_ON_DISCARD = new Set<PlayerAction['type']>([
+  'takeDiscard',
+  'swapDrawn',
+  'discardDrawn',
+]);
+
 interface Pending {
   key: string;
   handle: ReturnType<typeof setTimeout>;
@@ -28,6 +41,9 @@ export class BotPlayer {
   private brain: BotBrain;
   private turn: Pending | null = null;
   private snap: Pending | null = null;
+  /** Seit wann die aktuelle Abwurf-Gelegenheit besteht. */
+  private snapOpenedAt = 0;
+  private snapKey = '';
 
   constructor(
     readonly id: string,
@@ -53,6 +69,11 @@ export class BotPlayer {
 
   update({ view, events }: GameUpdate) {
     this.brain.observe(events);
+    const key = view.snapAllowed ? snapOpportunityKey(view) : '';
+    if (key !== this.snapKey) {
+      this.snapKey = key;
+      this.snapOpenedAt = Date.now();
+    }
     this.planTurn(view);
     this.planSnap(view);
   }
@@ -68,7 +89,7 @@ export class BotPlayer {
       this.turn = null;
       return;
     }
-    const key = `${view.partieNumber}:${view.lap}:${view.currentPlayerId}:${view.phase.type}`;
+    const key = turnKey(view);
     if (this.turn?.key === key) return;
     if (this.turn) clearTimeout(this.turn.handle);
     this.turn = { key, handle: setTimeout(() => this.actTurn(), this.brain.thinkDelay()) };
@@ -80,10 +101,25 @@ export class BotPlayer {
     if (!view) return;
     const action = this.brain.decideTurn(view);
     if (!action) return;
+
+    // Bei „Abwerfen bis zur nächsten Karte“ bekommen Menschen mindestens die
+    // eingestellte Abwurf-Zeit, bevor ein Bot die nächste Karte ablegt.
+    const wait = this.snapTimeLeft(view);
+    if (PUTS_CARD_ON_DISCARD.has(action.type) && wait > 0) {
+      this.turn = { key: turnKey(view), handle: setTimeout(() => this.actTurn(), wait) };
+      return;
+    }
+
     if (this.host.botAct(this.id, action).ok) return;
     // Sollte nicht vorkommen – zur Sicherheit einen immer gültigen Schritt machen.
     const fallback = fallbackAction(view);
     if (fallback) this.host.botAct(this.id, fallback);
+  }
+
+  private snapTimeLeft(view: PlayerView): number {
+    if (!view.snapAllowed || view.settings.snapWindowMode !== 'untilNextCard') return 0;
+    const minimum = view.settings.snapWindow * 1000 + ANIMATION_ALLOWANCE_MS;
+    return this.snapOpenedAt + minimum - Date.now();
   }
 
   private planSnap(view: PlayerView) {
@@ -101,6 +137,10 @@ export class BotPlayer {
       }, decision.delayMs),
     };
   }
+}
+
+function turnKey(view: PlayerView) {
+  return `${view.partieNumber}:${view.lap}:${view.currentPlayerId}:${view.phase.type}`;
 }
 
 /** Ein Schritt, der in der jeweiligen Phase immer erlaubt ist. */

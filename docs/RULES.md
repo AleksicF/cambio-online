@@ -85,7 +85,7 @@ Sobald eine Karte durch einen Zug auf den Ablagestapel kommt, öffnet sich das *
 **Dauer des Abwurf-Fensters:** Der Host wählt:
 
 - **Feste Zeit** (Standard 3 s): Das Spiel wartet, bis das Fenster abgelaufen ist. Danach beginnt der nächste Zug.
-- **Bis zur nächsten Karte:** Der nächste Zug beginnt sofort. Abwerfen bleibt möglich, bis die nächste Karte auf den Ablagestapel kommt – also auch während der nächste Spieler zieht oder eine Fähigkeit nutzt. Wirft jemand während eines fremden Zugs eine fremde Karte richtig ab, wird der Zug für das Abgeben der Karte kurz unterbrochen. Nach dem letzten Zug einer Partie gibt es ein normales Fenster mit fester Zeit, bevor aufgedeckt wird.
+- **Bis zur nächsten Karte:** Der nächste Zug beginnt sofort. Abwerfen bleibt möglich, bis die nächste Karte auf den Ablagestapel kommt – also auch während der nächste Spieler zieht oder eine Fähigkeit nutzt. Wirft jemand während eines fremden Zugs eine fremde Karte richtig ab, wird der Zug für das Abgeben der Karte kurz unterbrochen. Nach dem letzten Zug einer Partie gibt es ein normales Fenster mit fester Zeit, bevor aufgedeckt wird. Bots legen in diesem Modus frühestens nach der eingestellten Abwurf-Zeit (plus kurzer Animationszeit) eine neue Karte ab, damit Menschen genug Zeit zum Abwerfen haben.
 
 **Ablauf:**
 
@@ -142,7 +142,7 @@ Der Host legt vor Spielbeginn in einem Einstellungsfenster fest:
 | Strafpunkte für Rufer (Punktemodus) | 0–30                                     | 10           |
 | Zeitlimit pro Zug                   | aus / 15–120 s                           | 30 s         |
 | Abwurf-Fenster                      | feste Zeit / bis zur nächsten Karte      | feste Zeit   |
-| Dauer bei fester Zeit               | 2–10 s                                   | 3 s          |
+| Abwurf-Zeit (fest bzw. Mindestzeit) | 2–10 s                                   | 3 s          |
 | Strafkarten                         | steigend / gleichbleibend (1 pro Fehler) | steigend     |
 | Anschauzeit (Start & Fähigkeiten)   | 2–10 s                                   | 3 s          |
 | Cambio frühestens ab Umlauf         | 1–5                                      | 3            |
