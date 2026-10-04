@@ -65,6 +65,7 @@ export function createGame(
     partieNumber: 0,
     cambioCallerId: null,
     snapOpen: false,
+    snapTaken: false,
     finalTurnsLeft: 0,
     results: [],
   };
@@ -83,6 +84,7 @@ function startPartie(s: GameState, ctx: Ctx) {
   s.lap = 1;
   s.cambioCallerId = null;
   s.snapOpen = false;
+  s.snapTaken = false;
   s.finalTurnsLeft = 0;
 
   const deck = shuffle(createDeck(), ctx.random);
@@ -219,6 +221,7 @@ function handlePlayerAction(
       const discarded = player.slots[action.slot]!;
       player.slots[action.slot] = taken;
       s.discardPile.push(discarded);
+      s.snapTaken = false;
       ctx.events.push(
         toAll({
           type: 'tookDiscard',
@@ -240,6 +243,7 @@ function handlePlayerAction(
       const discarded = player.slots[action.slot]!;
       player.slots[action.slot] = phase.card;
       s.discardPile.push(discarded);
+      s.snapTaken = false;
       ctx.events.push(
         toAll({ type: 'swappedDrawn', playerId: player.id, slot: action.slot, discarded }),
       );
@@ -428,13 +432,19 @@ function discardDrawn(
   allowAbility: boolean,
   ctx: Ctx,
 ) {
-  // Neue Karte auf der Ablage: Abwerfen auf die alte endet; auf die neue erst nach der Fähigkeit.
+  // Neue Karte auf der Ablage: Abwerfen auf die alte endet.
   s.snapOpen = false;
+  s.snapTaken = false;
   s.discardPile.push(card);
   ctx.events.push(toAll({ type: 'discardedDrawn', playerId: player.id, card }));
   const ability = allowAbility ? abilityOf(card) : null;
-  if (ability) s.phase = { type: 'ability', ability };
-  else openSnapWindow(s, ctx);
+  if (ability) {
+    // Abwerfen ist schon vor und während der Fähigkeit möglich (RULES §6).
+    s.phase = { type: 'ability', ability };
+    s.snapOpen = true;
+  } else {
+    openSnapWindow(s, ctx);
+  }
 }
 
 /** Zieht vom Nachziehstapel; mischt bei Bedarf den Ablagestapel ein (RULES §9). */
@@ -498,6 +508,7 @@ function snap(s: GameState, snapper: PlayerState, target: SlotRef, ctx: Ctx) {
     // Abwerfen während eines Zugs: Nur der erste richtige Abwurf zählt,
     // der unterbrochene Zug geht nach dem Abgeben weiter.
     s.snapOpen = false;
+    s.snapTaken = true;
     if (mustGive) {
       s.phase = { type: 'snapGive', snapperId: snapper.id, target, resume: s.phase };
     }
@@ -531,8 +542,14 @@ function giveCard(s: GameState, giver: PlayerState, slot: number, to: SlotRef, c
  * Feste Zeit: Abwurf-Fenster als eigene Phase. Bis zur nächsten Karte: Der
  * nächste Zug beginnt sofort, Abwerfen bleibt offen – außer nach dem letzten
  * Zug der Partie, dort gibt es ein Fenster mit fester Zeit.
+ * Wurde schon (während einer Fähigkeit) richtig abgeworfen, gibt es kein Fenster mehr.
  */
 function openSnapWindow(s: GameState, ctx: Ctx) {
+  if (s.snapTaken) {
+    s.snapOpen = false;
+    finishTurn(s, ctx);
+    return;
+  }
   if (s.settings.snapWindowMode === 'untilNextCard' && !isLastTurn(s)) {
     s.snapOpen = true;
     finishTurn(s, ctx);

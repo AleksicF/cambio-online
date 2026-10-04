@@ -380,6 +380,77 @@ describe('Abwerfen', () => {
   });
 });
 
+describe('Abwerfen rund um Fähigkeiten', () => {
+  /** A legt eine frisch gezogene Aktionskarte ab; die Fähigkeit ist noch offen. */
+  const withAbility = (
+    card: Card,
+    hands: Layout['hands'],
+    settings: Partial<GameSettings> = {},
+  ) => {
+    let s = setup({ hands, drawPile: [c('3'), c('3'), c('3'), card] }, settings);
+    s = act(s, 'a', { type: 'drawFromDeck' });
+    return act(s, 'a', { type: 'discardDrawn' });
+  };
+
+  it('vor der Fähigkeit darf schon abgeworfen werden – auch vom aktiven Spieler', () => {
+    const s = withAbility(c('7', 'hearts'), { a: [c('7'), c('2'), c('2'), c('2')] });
+    expect(s.phase).toEqual({ type: 'ability', ability: 'peekOwn' });
+    expect(getPlayerView(s, 'b').snapAllowed).toBe(true);
+    const after = act(s, 'a', { type: 'snap', target: { playerId: 'a', slot: 0 } });
+    expect(after.players[0]!.slots[0]).toBeNull();
+    // Die Fähigkeit steht weiterhin zur Verfügung.
+    expect(after.phase.type).toBe('ability');
+    expect(act(after, 'a', { type: 'peekOwn', slot: 1 }).phase.type).not.toBe('ability');
+  });
+
+  it('nach der Fähigkeit folgt das normale Abwurf-Fenster', () => {
+    let s = withAbility(c('9'), { b: [c('9', 'hearts'), c('2'), c('2'), c('2')] });
+    s = act(s, 'a', { type: 'peekOther', target: { playerId: 'c', slot: 0 } });
+    expect(s.phase.type).toBe('snapWindow');
+    s = act(s, 'b', { type: 'snap', target: { playerId: 'b', slot: 0 } });
+    expect(s.players[1]!.slots[0]).toBeNull();
+  });
+
+  it('nur der erste richtige Abwurf zählt – kein zweites Fenster nach der Fähigkeit', () => {
+    let s = withAbility(c('9'), {
+      b: [c('9', 'hearts'), c('2'), c('2'), c('2')],
+      c: [c('9', 'clubs'), c('2'), c('2'), c('2')],
+    });
+    s = act(s, 'b', { type: 'snap', target: { playerId: 'b', slot: 0 } });
+    expect(errorOf(s, 'c', { type: 'snap', target: { playerId: 'c', slot: 0 } })).toBe(
+      'wrongPhase',
+    );
+    s = act(s, 'a', { type: 'skipAbility' });
+    expect(s.phase.type).toBe('turn');
+    expect(currentPlayer(s).id).toBe('b');
+  });
+
+  it('fremde Karte richtig während der Fähigkeit: Abgeben, dann geht die Fähigkeit weiter', () => {
+    let s = withAbility(c('J'), {
+      b: [c('K'), c('2'), c('2'), c('2')],
+      c: [c('J', 'hearts'), c('2'), c('2'), c('2')],
+    });
+    s = act(s, 'b', { type: 'snap', target: { playerId: 'c', slot: 0 } });
+    expect(s.phase.type).toBe('snapGive');
+    s = act(s, 'b', { type: 'giveCard', slot: 0 });
+    expect(s.phase).toEqual({ type: 'ability', ability: 'blindSwap' });
+  });
+
+  it('nach dem Cambio-Ruf darf der Rufer auch während Fähigkeiten nicht abwerfen', () => {
+    let s = setup(
+      { drawPile: [c('3'), c('3'), c('8')], hands: { a: [c('8', 'hearts'), c('2')] } },
+      { cambioFromLap: 1 },
+    );
+    s = act(s, 'a', { type: 'callCambio' });
+    s = act(s, 'b', { type: 'drawFromDeck' });
+    s = act(s, 'b', { type: 'discardDrawn' });
+    expect(s.phase.type).toBe('ability');
+    expect(errorOf(s, 'a', { type: 'snap', target: { playerId: 'b', slot: 0 } })).toBe(
+      'callerCannotAct',
+    );
+  });
+});
+
 describe('Strafkarten gleichbleibend', () => {
   it('jeder Fehler kostet genau eine Karte', () => {
     let s = setup(
@@ -438,8 +509,8 @@ describe('Abwerfen bis zur nächsten Karte', () => {
     let s = afterFive({ c: [c('5'), c('9')] }, [c('3'), c('3'), c('9'), c('5')]);
     s = act(s, 'b', { type: 'drawFromDeck' });
     s = act(s, 'b', { type: 'discardDrawn' });
-    // Ablage zeigt jetzt die 9 (Fähigkeit) – erst nach der Fähigkeit wieder offen.
-    expect(getPlayerView(s, 'c').snapAllowed).toBe(false);
+    // Ablage zeigt jetzt die 9 – Abwerfen ist schon während der Fähigkeit offen.
+    expect(getPlayerView(s, 'c').snapAllowed).toBe(true);
     s = act(s, 'b', { type: 'skipAbility' });
     expect(currentPlayer(s).id).toBe('c');
     // Die 5 passt nicht mehr, die 9 schon.

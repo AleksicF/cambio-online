@@ -71,6 +71,8 @@ export interface GameState {
   cambioCallerId: string | null;
   /** Abwerfen auf die oberste Ablagekarte ist noch erlaubt (Modus „bis zur nächsten Karte“). */
   snapOpen: boolean;
+  /** Auf die aktuelle Ablagekarte wurde schon richtig abgeworfen (nur der erste zählt). */
+  snapTaken: boolean;
   /** Verbleibende Züge nach dem Cambio-Ruf. */
   finalTurnsLeft: number;
   results: PartieResult[];

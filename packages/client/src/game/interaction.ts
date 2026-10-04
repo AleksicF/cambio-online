@@ -4,11 +4,20 @@ import type { Ability, PlayerAction, PlayerView, SlotRef } from '@cambio/shared'
 export interface LocalSelection {
   /** Spieler hat die offene Karte angeklickt und wählt jetzt den Tauschplatz. */
   takingDiscard: boolean;
+  /**
+   * „Fähigkeit einsetzen“ wurde gedrückt: Klicks wählen jetzt Ziele der Fähigkeit.
+   * Vorher werfen Klicks/Ziehen ab (RULES §6).
+   */
+  abilityArmed: boolean;
   /** Bereits gewählte Karten für Tausch-Fähigkeiten. */
   picked: SlotRef[];
 }
 
-export const EMPTY_SELECTION: LocalSelection = { takingDiscard: false, picked: [] };
+export const EMPTY_SELECTION: LocalSelection = {
+  takingDiscard: false,
+  abilityArmed: false,
+  picked: [],
+};
 
 export type ClickResult =
   | { kind: 'action'; action: PlayerAction }
@@ -39,7 +48,7 @@ export function isTurnSelectable(view: PlayerView, sel: LocalSelection, ref: Slo
     case 'drawn':
       return myTurn && own;
     case 'ability':
-      if (!myTurn || locked) return false;
+      if (!myTurn || locked || !sel.abilityArmed) return false;
       if (phase.ability === 'peekOwn') return own;
       if (phase.ability === 'peekOther') return !own;
       return true;
@@ -132,11 +141,4 @@ export const ABILITY_LABEL: Record<Ability, string> = {
   peekOther: 'Fremde Karte ansehen',
   blindSwap: 'Blind tauschen',
   king: 'Ansehen, dann tauschen',
-};
-
-export const ABILITY_SHORT: Record<Ability, string> = {
-  peekOwn: 'schaut eigene Karte an',
-  peekOther: 'schaut fremde Karte an',
-  blindSwap: 'tauscht blind',
-  king: 'nutzt den König',
 };

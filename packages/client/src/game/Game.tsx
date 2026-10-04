@@ -14,7 +14,7 @@ import { api } from '../net/store';
 import { errorText } from '../net/errors';
 import { DECK, DISCARD, DRAWN, slotAnchor } from './anchors';
 import {
-  ABILITY_SHORT,
+  ABILITY_LABEL,
   ABILITY_TEXT,
   EMPTY_SELECTION,
   canSnapCard,
@@ -232,13 +232,31 @@ export function Game({ update, room, deadline }: GameProps) {
                 Ablegen
               </button>
             )}
+            {myTurn && view.phase.type === 'ability' && !selection.abilityArmed && (
+              <button
+                type="button"
+                className="button button--primary"
+                onClick={() => setSelection({ ...selection, abilityArmed: true })}
+              >
+                Fähigkeit einsetzen
+              </button>
+            )}
+            {myTurn && view.phase.type === 'ability' && selection.abilityArmed && (
+              <button
+                type="button"
+                className="button"
+                onClick={() => setSelection(EMPTY_SELECTION)}
+              >
+                Zurück
+              </button>
+            )}
             {myTurn && (view.phase.type === 'ability' || view.phase.type === 'kingSwap') && (
               <button
                 type="button"
                 className="button"
                 onClick={() => void send({ type: 'skipAbility' })}
               >
-                {view.phase.type === 'kingSwap' ? 'Nicht tauschen' : 'Überspringen'}
+                {view.phase.type === 'kingSwap' ? 'Nicht tauschen' : 'Auslassen'}
               </button>
             )}
             {view.canCallCambio && (
@@ -437,7 +455,11 @@ function Prompt({
         : `${active} hat gezogen.`;
       break;
     case 'ability':
-      text = myTurn ? ABILITY_TEXT[phase.ability] : `${active} ${ABILITY_SHORT[phase.ability]}.`;
+      if (!myTurn)
+        text = `${active} kann eine Fähigkeit einsetzen (${ABILITY_LABEL[phase.ability]}).`;
+      else if (!selection.abilityArmed) {
+        text = `Fähigkeit „${ABILITY_LABEL[phase.ability]}“ einsetzen oder auslassen.`;
+      } else text = ABILITY_TEXT[phase.ability];
       if (myTurn && phase.ability === 'blindSwap' && selection.picked.length === 1) {
         text = 'Wähle die zweite Karte (anderer Spieler).';
       }

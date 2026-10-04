@@ -186,8 +186,10 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
               dafür hergibst.
             </li>
             <li>
-              <strong>Fähigkeiten:</strong> Zielkarte anklicken; zum Tauschen zwei Karten
-              nacheinander. Mit „Überspringen“ lässt du die Fähigkeit aus.
+              <strong>Fähigkeiten:</strong> Nach dem Ablegen einer Aktionskarte auf „Fähigkeit
+              einsetzen“ drücken, dann die Zielkarte anklicken (zum Tauschen zwei Karten
+              nacheinander). Mit „Auslassen“ verzichtest du darauf. Vorher und nachher kann jeder
+              abwerfen.
             </li>
             <li>
               <strong>Abwerfen:</strong> Karte auf die Ablage ziehen. Wer lieber alles klickt,

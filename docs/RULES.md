@@ -89,7 +89,8 @@ Sobald eine Karte durch einen Zug auf den Ablagestapel kommt, öffnet sich das *
 
 **Ablauf:**
 
-- Fähigkeiten (§5) werden **vor** dem Abwurf-Fenster ausgeführt. Das Fenster öffnet sich danach.
+- Wird eine Aktionskarte abgelegt (§5), darf **sofort** abgeworfen werden – vor und während der Fähigkeit, auch vom aktiven Spieler. Der aktive Spieler setzt die Fähigkeit ein, wann er will (Button „Fähigkeit einsetzen“), oder lässt sie aus. Danach folgt das Abwurf-Fenster wie bei jeder anderen Karte.
+- Nur der erste richtige Abwurf zählt – auch über die Fähigkeit hinweg: Wurde vorher schon richtig abgeworfen, gibt es danach kein weiteres Fenster.
 - Nur der **erste richtige** Abwurf zählt und schließt das Fenster. Falsche Abwürfe schließen es nicht.
 - Abgeworfene Karten öffnen **kein** neues Fenster.
 - Bei fester Zeit beginnt der nächste Zug, sobald das Fenster geschlossen ist.
